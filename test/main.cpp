@@ -135,10 +135,18 @@ struct Render_Bilinear1 : public Render_ScalerBase {
 // typedef int fixed;
 // typedef int64_t fixedbig;
 
+#if 1
     #define FIXED 10
     #define FRAC_BITS 0x3FF
     typedef uint32_t fixed;
     typedef uint32_t fixedbig;
+#else
+    #define FIXED 10
+    // #define FRAC_BITS 0x3FF
+    typedef uint16_t fixed;
+    typedef uint32_t fixedbig;
+#endif
+
 
 void BilinearScale2(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest, int destWidth, int destHeight) {
     uint32_t s0, s1, s2, s3;
