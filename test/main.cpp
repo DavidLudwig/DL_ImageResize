@@ -35,6 +35,7 @@ struct Render_Src2X : public DLT_Renderer {
 
 int ScaleWidth = 448;
 int ScaleHeight = 448;
+bool Fullscreen = false;
 
 // int ScaleWidth = 1300;
 // int ScaleHeight = 800;
@@ -46,6 +47,18 @@ struct Render_ScalerBase : public DLT_Renderer {
 
     void * buffer = NULL;
     virtual void Init(DLT_Env & env) {
+        if (Fullscreen) {
+            SDL_Rect r = {0, 0, 0, 0};
+            if (SDL_GetDisplayBounds(0, &r) != 0) {
+                printf("ERROR: Unable to get display bounds! reason=\"%s\"\n", SDL_GetError());
+                exit(1);
+                return;
+            }
+            ScaleWidth = r.w;
+            ScaleHeight = r.h;
+            fprintf(stderr, "# Using fullscreen display size: %dx%d\n", r.w, r.h);
+        }
+        
         // Create a pixel buffer aligned on a 16-byte boundary, in case we want
         // to use SSE2 aligned I/O.
         buffer = calloc(1, (ScaleWidth * ScaleHeight * 4) + 16);
@@ -122,10 +135,10 @@ struct Render_Bilinear1 : public Render_ScalerBase {
 // typedef int fixed;
 // typedef int64_t fixedbig;
 
-#define FIXED 10
-#define FRAC_BITS 0x3FF
-typedef uint32_t fixed;
-typedef uint32_t fixedbig;
+    #define FIXED 10
+    #define FRAC_BITS 0x3FF
+    typedef uint32_t fixed;
+    typedef uint32_t fixedbig;
 
 void BilinearScale2(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest, int destWidth, int destHeight) {
     uint32_t s0, s1, s2, s3;
@@ -255,7 +268,13 @@ int main(int argc, char ** argv) {
             }
         } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
             if (++i < argc) {
-                sscanf(argv[i], "%dx%d", &ScaleWidth, &ScaleHeight);
+                if (SDL_strcasecmp(argv[i], "full") == 0) {
+                    ScaleWidth = -1;
+                    ScaleHeight = -1;
+                    Fullscreen = true;
+                } else {
+                    sscanf(argv[i], "%dx%d", &ScaleWidth, &ScaleHeight);
+                }
             }
         }
     }
@@ -281,11 +300,11 @@ int main(int argc, char ** argv) {
             if (!srcTemp) {
                 srcPath = std::string("./") + srcFile;
                 srcTemp = SDL_LoadBMP(srcPath.c_str());
-                if (!srcTemp) {
-                    SDL_Log("ERROR, Couldn't load source image\n");
-                    return 1;
-                }
+            if (!srcTemp) {
+                SDL_Log("ERROR, Couldn't load source image\n");
+                return 1;
             }
+        }
         }
 
         // Align src's pixel-bufferon a 16-byte boundary, in case we want to

@@ -404,6 +404,7 @@ void DLT_AddRenderer(DLT_Renderer * env)
 
 int DLT_Run(int argc, char **argv) {
     bool isHeadless = false;
+    bool isFullscreen = false;
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-?") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -423,6 +424,12 @@ int DLT_Run(int argc, char **argv) {
             exit(0);
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--headless") == 0) {
             isHeadless = true;
+        } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
+            if (++i < argc) {
+                if (SDL_strcasecmp(argv[i], "full") == 0) {
+                    isFullscreen = true;
+                }
+            }
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--cmp") == 0) {
             DLT_AddRenderer(new DLT_Render_Compare());
         } else if (strcmp(argv[i], "-t") == 0) {
@@ -449,7 +456,7 @@ int DLT_Run(int argc, char **argv) {
 
     // Init SDL, but only if we're not all-headless
     for (int i = 0; i < (int)envs.size(); ++i) {
-        if (!isHeadless) {
+        if (!isHeadless || isFullscreen) {
             if ( ! SDL_WasInit(0)) {
                 if (SDL_Init(SDL_INIT_VIDEO) != 0) {
                     SDL_Log("Can't init SDL: %s", SDL_GetError());
@@ -470,6 +477,10 @@ int DLT_Run(int argc, char **argv) {
         int h = (envs[i].dest ? envs[i].dest->h : 256);
         if (!isHeadless) {
             int window_flags = 0;
+            if (isFullscreen) {
+                window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+            }
+            
             envs[i].window = SDL_CreateWindow(
                 "DLTest",
                 winX,
