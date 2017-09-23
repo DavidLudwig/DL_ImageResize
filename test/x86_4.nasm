@@ -104,7 +104,18 @@ _BilinearScale4_x86:
     mul ebx                         ; eax *= ebx
     shr eax, FIXED                  ; eax >>= FIXED
     and eax, FRAC_BITS              ; eax &= FRAC_BITS
-    mov dword diffY, eax            ; diffY = eax
+    ;mov dword diffY, eax            ; diffY = eax
+
+    ; HAVE:
+    ;	eax = diffY
+    mov edx, FIXED_1
+    sub edx, eax        ; edx = 1 - diffY
+
+    ; xmm5 = diffY, diffY, 1-diffY, 1-diffY
+    pinsrd xmm5, eax, 3
+    pinsrd xmm5, eax, 2
+    pinsrd xmm5, edx, 1
+    pinsrd xmm5, edx, 0
 
     ; destX = 0
     mov dword destX, 0              ; destX = 0
@@ -114,6 +125,7 @@ _BilinearScale4_x86:
     shl eax, FIXED                  ; eax <<= FIXED
     mov ebx, ratioDestXtoSrcX       ; ebx = ratioDestXtoSrcX
     mul ebx                         ; eax *= ebx
+
     shr eax, FIXED_2X               ; eax >>= FIXED_2X
     mov dword srcX, eax             ; srcX = eax
 
@@ -122,11 +134,12 @@ _BilinearScale4_x86:
     shl eax, FIXED                  ; eax <<= FIXED
     mov ebx, ratioDestXtoSrcX       ; ebx = ratioDestXtoSrcX
     mul ebx                         ; eax *= ebx
+
     shr eax, FIXED                  ; eax >>= FIXED
     and eax, FRAC_BITS              ; eax &= FRAC_BITS
     mov dword diffX, eax            ; diffX = eax
 
-    ; srcIndex = (srcY * srcPitch) + (srcX * 4);
+    ; eax (srcIndex) = (srcY * srcPitch) + (srcX * 4);
     mov eax, srcY                   ; eax = srcY
     mov ebx, srcPitch               ; ebx = srcPitch
     mov ecx, srcX                   ; ecx = srcX
@@ -135,8 +148,6 @@ _BilinearScale4_x86:
     add eax, ecx                    ; eax (srcY -> srcIndex) += ecx (srcX)
     ;mov dword srcIndex, eax        ; srcIndex = eax
 
-    ; s0 = src[srcIndex];
-    ; mov eax, srcIndex             ; eax = srcIndex
     mov ebx, src                    ; ebx = src
     mov ecx, srcPitch               ; ecx = srcPitch
     ; mov edx, [ebx + eax]          ; edx = src[srcIndex]
@@ -182,14 +193,11 @@ _BilinearScale4_x86:
     mov ebx, FIXED_1
     sub ebx, eax        ; ebx = 1 - diffX
 
-    mov ecx, diffY      ; ecx = diffY
-    mov edx, FIXED_1
-    sub edx, ecx        ; edx = 1 - diffY
-
     ; HAVE:
     ;   xmm1 = {r3, r2, r1, r0}
     ;   xmm2 = {g3, g2, g1, g0}
     ;   xmm3 = {b3, b2, b1, b0}
+    ;   xmm5 = diffY, diffY, 1-diffY, 1-diffY
     ;    eax = diffX
     ;    ebx = 1 - diffX
     ;    ecx = diffY
@@ -201,11 +209,6 @@ _BilinearScale4_x86:
     pinsrd xmm4, eax, 1
     pinsrd xmm4, ebx, 0
 
-    ; xmm5 = diffY, diffY, 1-diffY, 1-diffY
-    pinsrd xmm5, ecx, 3
-    pinsrd xmm5, ecx, 2
-    pinsrd xmm5, edx, 1
-    pinsrd xmm5, edx, 0
 
     ; fixedbig ffactor3 = ((             diffX) * (             diffY)) >> FIXED;
     ; fixedbig ffactor2 = (((1<<FIXED) - diffX) * (             diffY)) >> FIXED;
