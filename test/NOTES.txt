@@ -20,7 +20,7 @@ ratioDestXtoSrcX	xx
 ratioDestYtoSrcY	
 srcY 				x
 srcX 				x				x
-diffX				x				x
+diffX				x				x 			
 destY 				
 destX 				xxx				x 				edi
 srcPitch 			xx
@@ -28,3 +28,32 @@ src 				x
 dest 				x 				x
 destWidth 			x
 
+
++ destX --> temp
+					X-loop READS    X-loop WRITES	REGISTER
+ratioDestXtoSrcX	xx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x
+diffX				x				x 				temp,eax
+destY 				
+destX 				xxx				x 				edi
+srcPitch 			xx
+src 				x
+dest 				x 				x
+destWidth 			x
+
+
++ srcPitch --> esi
+					X-loop READS    X-loop WRITES	REGISTER
+ratioDestXtoSrcX	xx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x
+diffX				x				x 				temp,eax
+destY 				
+destX 				xxx				x 				edi
+srcPitch 			xx 								esi
+src 				x
+dest 				x 				x
+destWidth 			x

@@ -41,7 +41,7 @@ _BilinearScale4_x86:
     push esi
     push edi
     ; %define stackSpace          0x48
-    %define stackSpace          0x18
+    %define stackSpace          0x14
     sub esp, stackSpace
 
     %define ratioDestXtoSrcX    [ebp - 0x10]
@@ -57,16 +57,16 @@ _BilinearScale4_x86:
     ;%define s1                  [ebp - ]
     ;%define s2                  [ebp - ]
     ;%define s3                  [ebp - ]
-    %define srcPitch            [ebp - 0x24]
+    ;%define srcPitch            [ebp - 0x24]
     ;%define factor0             [ebp - ]
     ;%define factor1             [ebp - ]
     ;%define factor2             [ebp - ]
     ;%define factor3             [ebp - ]
 
     ; uint32_t srcPitch = (srcWidth * 4)
-    mov eax, srcWidth               ; eax = srcWidth
-    shl eax, 2                      ; eax *= 4
-    mov dword srcPitch, eax         ; srcPitch = eax
+    mov esi, srcWidth               ; eax = srcWidth
+    shl esi, 2                      ; eax *= 4
+    ;mov dword srcPitch, eax         ; srcPitch = eax
 
     ; fixed ratioDestXtoSrcX = (((srcWidth - 1)<<FIXED) / destWidth);
     mov eax, srcWidth               ; eax = srcWidth
@@ -128,7 +128,7 @@ _BilinearScale4_x86:
     ;   ebx
     ;   ecx
     ;   edx - RESERVED for div use
-    ;   esi
+    ;   esi - srcPitch
     ;   edi - destX
     ;  xmm0
     ;  xmm1
@@ -173,15 +173,15 @@ _BilinearScale4_x86:
 
     ; eax (srcIndex) = (srcY * srcPitch) + (srcX * 4);
     mov eax, srcY                   ; eax = srcY
-    mov ebx, srcPitch               ; ebx = srcPitch
+    ;mov ebx, srcPitch               ; ebx = srcPitch
     mov ecx, srcX                   ; ecx = srcX
-    mul ebx                         ; eax (srcY) *= ebx (srcPitch)
+    mul esi                         ; eax (srcY) *= esi (srcPitch)
     shl ecx, 2                      ; ecx (srcX) *= 4
     add eax, ecx                    ; eax (srcY -> srcIndex) += ecx (srcX)
     ;mov dword srcIndex, eax        ; srcIndex = eax
 
     mov ebx, src                    ; ebx = src
-    mov ecx, srcPitch               ; ecx = srcPitch
+    ;mov ecx, srcPitch               ; ecx = srcPitch
     ; mov edx, [ebx + eax]          ; edx = src[srcIndex]
     ; mov s0, edx                   ; s0 = edx
 
@@ -190,7 +190,7 @@ _BilinearScale4_x86:
     movq xmm0, [ebx]    ; xmm0 = s0,s1,0,0 according to lldb-default, and in BGRA
                         ;  or 0,0,s1,s0 according to single hex value, and in ARGB
 
-    add ebx, ecx        ; ebx (src) += ecx (srcPitch)
+    add ebx, esi        ; ebx (src) += esi (srcPitch)
     ; [ebx] is 2nd row of src
     movq xmm1, [ebx]    ; xmm1 = 0,0,s3,s2 according to single hex value, and in ARGB
     pslldq xmm1, 8      ; xmm1 = s3,s2,0,0
@@ -227,12 +227,6 @@ _BilinearScale4_x86:
     ;   xmm3 = {b3, b2, b1, b0}
     ;   xmm4 = diffX, 1-diffX, diffX, 1-diffX
     ;   xmm5 = diffY, diffY, 1-diffY, 1-diffY
-    ;    eax = diffX
-    ;    ebx = 1 - diffX
-    ;    ecx = diffY
-    ;    edx = 1 - diffY
-
-
 
     ; fixedbig ffactor3 = ((             diffX) * (             diffY)) >> FIXED;
     ; fixedbig ffactor2 = (((1<<FIXED) - diffX) * (             diffY)) >> FIXED;
