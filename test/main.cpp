@@ -295,16 +295,11 @@ int main(int argc, char ** argv) {
                 }
             }
         } else {
-            std::string srcPath = std::string("../../") + srcFile;
-            srcTemp = SDL_LoadBMP(srcPath.c_str());
-            if (!srcTemp) {
-                srcPath = std::string("./") + srcFile;
-                srcTemp = SDL_LoadBMP(srcPath.c_str());
+            srcTemp = SDL_LoadBMP(srcFile.c_str());
             if (!srcTemp) {
                 SDL_Log("ERROR, Couldn't load source image\n");
                 return 1;
             }
-        }
         }
 
         // Align src's pixel-bufferon a 16-byte boundary, in case we want to
