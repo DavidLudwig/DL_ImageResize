@@ -49,7 +49,7 @@ _BilinearScale4_x86:
     %define srcY                [ebp - 0x18]
     %define srcX                [ebp - 0x1c]
    ;%define diffY               [ebp - ]
-    %define diffX               [ebp - 0x20]
+   ;%define diffX               [ebp - ]
     %define destY               [ebp - 0x24]
     %define destX               [ebp - 0x28]
     ;%define srcIndex           [ebp - ]
@@ -158,7 +158,18 @@ _BilinearScale4_x86:
 
     shr eax, FIXED                  ; eax >>= FIXED
     and eax, FRAC_BITS              ; eax &= FRAC_BITS
-    mov dword diffX, eax            ; diffX = eax
+    ;mov dword diffX, eax            ; diffX = eax
+
+    ;mov eax, diffX      ; eax = diffX
+    mov ebx, FIXED_1
+    sub ebx, eax        ; ebx = 1 - diffX
+
+    ; xmm4 = diffX, 1-diffX, diffX, 1-diffX
+    pinsrd xmm4, eax, 3
+    pinsrd xmm4, ebx, 2
+    pinsrd xmm4, eax, 1
+    pinsrd xmm4, ebx, 0
+
 
     ; eax (srcIndex) = (srcY * srcPitch) + (srcX * 4);
     mov eax, srcY                   ; eax = srcY
@@ -210,25 +221,17 @@ _BilinearScale4_x86:
     psrld xmm3, 24      ; xmm3  = 000000B3 000000B2 000000B1 000000B0
     pslld xmm3, FIXED   ; xmm3  = {b3, b2, b1, b0}
 
-    mov eax, diffX      ; eax = diffX
-    mov ebx, FIXED_1
-    sub ebx, eax        ; ebx = 1 - diffX
-
     ; HAVE:
     ;   xmm1 = {r3, r2, r1, r0}
     ;   xmm2 = {g3, g2, g1, g0}
     ;   xmm3 = {b3, b2, b1, b0}
+    ;   xmm4 = diffX, 1-diffX, diffX, 1-diffX
     ;   xmm5 = diffY, diffY, 1-diffY, 1-diffY
     ;    eax = diffX
     ;    ebx = 1 - diffX
     ;    ecx = diffY
     ;    edx = 1 - diffY
 
-    ; xmm4 = diffX, 1-diffX, diffX, 1-diffX
-    pinsrd xmm4, eax, 3
-    pinsrd xmm4, ebx, 2
-    pinsrd xmm4, eax, 1
-    pinsrd xmm4, ebx, 0
 
 
     ; fixedbig ffactor3 = ((             diffX) * (             diffY)) >> FIXED;
