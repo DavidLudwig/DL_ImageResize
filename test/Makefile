@@ -5,6 +5,7 @@ run: test
 	#./test -r bi -h -n 10
 	# ./test -r bi2 -h -n 500 -t 2500 && ./test -r bi1 -h -n 500 -t 2500 && ./test -r scalesdl -h -n 500 -t 2500
 	# ./test -r bi2 -h -n 500 -t 2500 test_full.bmp && ./test -r bi1 -h -n 500 -t 2500 test_full.bmp && ./test -r scalesdl -h -n 500 -t 2500 test_full.bmp
+	./test -r bi2 -r bi3 --cmp -f test_330.bmp -s 448x448
 
 test: DLTest.cpp DLTest.h main.cpp Makefile x86
 	#emcc test.cpp -O2 -o test.html -I .. -std=c++11 $(shell ./dltest-config emscripten)
