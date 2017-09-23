@@ -18,15 +18,6 @@ section .text
 %define FIXED_1 0x400
 
 _BilinearScale4_x86:
-    ; Mac OS X compatible prologue
-    push ebp
-    mov ebp, esp
-    push ebx
-    push esi
-    push edi
-    %define stackSpace          0x48
-    sub esp, stackSpace
-
     ; extern "C" void BilinearScale3_x86(
     ;     uint32_t * src,
     ;     uint32_t srcWidth,
@@ -43,25 +34,34 @@ _BilinearScale4_x86:
     %define destWidth           [ebp + PARAM_START + 0x10]
     %define destHeight          [ebp + PARAM_START + 0x14]
 
+    ; Mac OS X compatible prologue
+    push ebp
+    mov ebp, esp
+    push ebx
+    push esi
+    push edi
+    ; %define stackSpace          0x48
+    %define stackSpace          0x20
+    sub esp, stackSpace
 
     %define ratioDestXtoSrcX    [ebp - 0x10]
     %define ratioDestYtoSrcY    [ebp - 0x14]
     %define srcY                [ebp - 0x18]
     %define srcX                [ebp - 0x1c]
-    %define diffY               [ebp - 0x20]
-    %define diffX               [ebp - 0x24]
-    %define destY               [ebp - 0x28]
-    %define destX               [ebp - 0x2c]
-    ;%define srcIndex           [ebp - 0x30]
-    %define s0                  [ebp - 0x34]
-    %define s1                  [ebp - 0x38]
-    %define s2                  [ebp - 0x3c]
-    %define s3                  [ebp - 0x40]
-    %define srcPitch            [ebp - 0x44]
-    %define factor0             [ebp - 0x48]
-    %define factor1             [ebp - 0x4c]
-    %define factor2             [ebp - 0x50]
-    %define factor3             [ebp - 0x54]
+   ;%define diffY               [ebp - ]
+    %define diffX               [ebp - 0x20]
+    %define destY               [ebp - 0x24]
+    %define destX               [ebp - 0x28]
+    ;%define srcIndex           [ebp - ]
+    ;%define s0                  [ebp - ]
+    ;%define s1                  [ebp - ]
+    ;%define s2                  [ebp - ]
+    ;%define s3                  [ebp - ]
+    %define srcPitch            [ebp - 0x2c]
+    ;%define factor0             [ebp - ]
+    ;%define factor1             [ebp - ]
+    ;%define factor2             [ebp - ]
+    ;%define factor3             [ebp - ]
 
     ; uint32_t srcPitch = (srcWidth * 4)
     mov eax, srcWidth               ; eax = srcWidth
