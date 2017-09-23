@@ -1,0 +1,26 @@
+#!/bin/sh
+if [ "$1" != "" ]; then
+	DLTEST_SYSTEM="$1"
+else
+	DLTEST_SYSTEM="$(uname)"
+fi
+case "$DLTEST_SYSTEM" in
+	Linux)
+		if ! type sdl2-config > /dev/null; then
+			>&2 echo "ERROR: Can't find SDL2 development tool, sdl2-config"
+			exit 1
+		fi
+		echo "$(sdl2-config --cflags) $(sdl2-config --libs) -lGL"
+		;;
+	Darwin)
+		echo "-F external -framework SDL2 -I external/SDL2.framework/Headers -framework OpenGL -rpath \"@executable_path/external\""
+		;;
+	emscripten)
+		echo "-s USE_SDL=2"
+		;;
+	*)
+		>&2 echo "ERROR: Unknown platform for DLTest program's Makefile!"
+		exit 1
+		break
+		;;
+esac
