@@ -1,0 +1,30 @@
+
+INITIAL
+					X-loop READS    X-loop WRITES
+ratioDestXtoSrcX	xx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x
+diffX				x				x
+destY 				
+destX 				xxx				x
+srcPitch 			xx
+src 				x
+dest 				x 				x
+destWidth 			x
+
+
++ destX --> edi
+					X-loop READS    X-loop WRITES	REGISTER
+ratioDestXtoSrcX	xx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x
+diffX				x				x
+destY 				
+destX 				xxx				x 				edi
+srcPitch 			xx
+src 				x
+dest 				x 				x
+destWidth 			x
+

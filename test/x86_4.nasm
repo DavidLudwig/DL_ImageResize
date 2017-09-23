@@ -118,10 +118,30 @@ _BilinearScale4_x86:
     pinsrd xmm5, edx, 0
 
     ; destX = 0
-    mov dword destX, 0              ; destX = 0
+    ;mov dword destX, 0              ; destX = 0
+    xor edi, edi
+    ;mov edi, 0
 .LoopDestX:
+
+    ; REGS
+    ;   eax - RESERVED for mul and div use
+    ;   ebx
+    ;   ecx
+    ;   edx - RESERVED for div use
+    ;   esi
+    ;   edi - destX
+    ;  xmm0
+    ;  xmm1
+    ;  xmm2
+    ;  xmm3
+    ;  xmm4
+    ;  xmm5 - ASSIGNED: diffY, diffY, 1-diffY, 1-diffY
+    ;  xmm6
+    ;  xmm7
+
     ; srcX = (((fixedbig)ratioDestXToSrcX * (fixedbig)(destX<<FIXED))>>(FIXED*2);
-    mov eax, destX                  ; eax = destX
+    ;mov eax, destX                  ; eax = destX
+    mov eax, edi
     shl eax, FIXED                  ; eax <<= FIXED
     mov ebx, ratioDestXtoSrcX       ; ebx = ratioDestXtoSrcX
     mul ebx                         ; eax *= ebx
@@ -130,7 +150,8 @@ _BilinearScale4_x86:
     mov dword srcX, eax             ; srcX = eax
 
     ; diffX = (((fixedbig)ratioDestXToSrcX * (fixedbig)(destX<<FIXED))>>FIXED) & FRAC_BITS;
-    mov eax, destX                  ; eax = destX
+    ;mov eax, destX                  ; eax = destX
+    mov eax, edi
     shl eax, FIXED                  ; eax <<= FIXED
     mov ebx, ratioDestXtoSrcX       ; ebx = ratioDestXtoSrcX
     mul ebx                         ; eax *= ebx
@@ -303,17 +324,18 @@ _BilinearScale4_x86:
 
     ; *dest++ = edx
     ; mov edx, 0xFFFF0000
-    mov edi, dest           ; edi = dest
-    mov [edi], edx          ; *edi (dest) = edx (colorFinal)
-    add edi, 4              ; edi += 4
-    mov dest, edi           ; dest = edi
+    mov ebx, dest           ; ebx = dest
+    mov [ebx], edx          ; *ebx (dest) = edx (colorFinal)
+    add ebx, 4              ; ebx += 4
+    mov dest, ebx           ; dest = ebx
 
     ; ++destX
     mov ebx, destWidth
-    mov eax, destX
-    inc eax
-    mov destX, eax
-    cmp eax, ebx
+    ;mov eax, destX
+    ;inc eax
+    ;mov destX, eax
+    inc edi
+    cmp edi, ebx
     jne .LoopDestX
 
     ; ++destY
