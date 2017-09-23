@@ -506,7 +506,9 @@ int DLT_Run(int argc, char **argv) {
     DLT_UpdateWindowTitles();
 
     // Performance measurement stuff:
-    printf("# %-15s %-15s %-15s\n", "t,seconds", "fps", "ms/frame");
+    if (numTicksBetweenPerfMeasurements > 0) {
+        printf("# %-15s %-15s %-15s\n", "t,seconds", "fps", "ms/frame");
+    }
     numTicksToNextMeasurement = numTicksBetweenPerfMeasurements;
     initialMeasurement = SDL_GetPerformanceCounter();
     lastMeasurement = initialMeasurement;
