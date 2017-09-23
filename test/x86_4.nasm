@@ -41,7 +41,7 @@ _BilinearScale4_x86:
     push esi
     push edi
     ; %define stackSpace          0x48
-    %define stackSpace          0x20
+    %define stackSpace          0x18
     sub esp, stackSpace
 
     %define ratioDestXtoSrcX    [ebp - 0x10]
@@ -49,15 +49,15 @@ _BilinearScale4_x86:
     %define srcY                [ebp - 0x18]
     %define srcX                [ebp - 0x1c]
    ;%define diffY               [ebp - ]
-   ;%define diffX               [ebp - ]
-    %define destY               [ebp - 0x24]
-    %define destX               [ebp - 0x28]
+   ;%define diffX               [ebp - ]        ; now edi
+    %define destY               [ebp - 0x20]
+   ;%define destX               [ebp - 0x28]
     ;%define srcIndex           [ebp - ]
     ;%define s0                  [ebp - ]
     ;%define s1                  [ebp - ]
     ;%define s2                  [ebp - ]
     ;%define s3                  [ebp - ]
-    %define srcPitch            [ebp - 0x2c]
+    %define srcPitch            [ebp - 0x24]
     ;%define factor0             [ebp - ]
     ;%define factor1             [ebp - ]
     ;%define factor2             [ebp - ]
