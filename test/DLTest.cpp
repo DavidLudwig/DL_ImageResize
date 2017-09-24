@@ -3,6 +3,9 @@
 
 #include "DLTest.h"
 
+#include <cstdarg>
+#include <unordered_map>
+
 // Disable deprecated C function warnings from MSVC:
 //#define _CRT_SECURE_NO_WARNINGS
 
@@ -23,8 +26,41 @@ void DLT_Renderer::Init(DLT_Env & env) {
 void DLT_Renderer::Draw(DLT_Env & env) {
 }
 
-std::string DLT_Render_Compare::GetShortName() {
-    return "CMP";
+const std::string & DLT_Renderer::GetShortName() const {
+    static const std::string emptyString;
+    if (metadata) {
+        return metadata->shortName;
+    } else {
+        return emptyString;
+    }
+}
+
+
+std::vector<DLT_RendererMetadata *> & DLT_AllRendererMetadata() {
+    static std::vector<DLT_RendererMetadata *> value;
+    return value;
+}
+
+DLT_RendererRegistrar::DLT_RendererRegistrar(
+    std::function<DLT_Renderer *()> factory,
+    std::string shortName,
+    std::string description
+) {
+    DLT_RendererMetadata * metadata = new DLT_RendererMetadata({
+        factory,
+        std::move(shortName),
+        std::move(description)
+    });
+    DLT_AllRendererMetadata().push_back(metadata);
+}
+
+DLT_RendererMetadata * DLT_FindRendererMetadataByName(const std::string & name) {
+    for (DLT_RendererMetadata * metadata : DLT_AllRendererMetadata()) {
+        if (SDL_strcasecmp(metadata->shortName.c_str(), name.c_str()) == 0) {
+            return metadata;
+        }
+    }
+    return NULL;
 }
 
 
@@ -42,6 +78,8 @@ bool DLT_GetOtherEnvs(DLT_Env * self, DLT_Env ** other, int numOther) {
 
     return (otherIndex < 0);
 }
+
+DLT_RegisterRenderer(DLT_Render_Compare, "CMP", "finds differences between two images");
 
 void DLT_Render_Compare::Init(DLT_Env & env) {
     DLT_Env * compareMe[2] = {NULL, NULL};
@@ -110,6 +148,8 @@ void DLT_Render_Compare::Draw(DLT_Env & env) {
         }
     }
 }
+
+
 
 #include <stdio.h>
 #include <limits>
@@ -402,7 +442,47 @@ void DLT_AddRenderer(DLT_Renderer * env)
     envs.push_back({env});
 }
 
-int DLT_Run(int argc, char **argv) {
+static char DLT_ErrorBuffer[8192] = {0};
+
+static const char * DLT_GetError() {
+    return DLT_ErrorBuffer;
+}
+
+static void DLT_ClearError() {
+    DLT_ErrorBuffer[0] = '\0';
+}
+
+static void DLT_SetError(const char * fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    if ( ! fmt) {
+        DLT_ClearError();
+    } else {
+        SDL_vsnprintf(DLT_ErrorBuffer, sizeof(DLT_ErrorBuffer), fmt, args);
+    }
+    va_end(args);
+}
+
+static bool DLT_AddRendererByName(const std::string & name) {
+    DLT_ClearError();
+    DLT_RendererMetadata * rmeta = DLT_FindRendererMetadataByName(name);
+    if (rmeta) {
+        DLT_Renderer * renderer = rmeta->factory();
+        if (renderer) {
+            renderer->metadata = rmeta;
+            DLT_AddRenderer(renderer);
+        } else {
+            printf("ERROR: Unable to create renderer of registered-type, \"%s\"\n", rmeta->shortName.c_str());
+            return false;
+        }
+    } else {
+        printf("ERROR: unknown renderer, \"%s\"\n", name.c_str());
+        return false;
+    }
+    return true;
+}
+
+int DLT_Run(int argc, char **argv, const char * defaultRenderer) {
     bool isHeadless = false;
     bool isFullscreen = false;
 
@@ -411,17 +491,19 @@ int DLT_Run(int argc, char **argv) {
             printf("DL_Raster test app\n"
                    "\n"
                    "Usage: \n"
-                   "\ttest [-h | --headless] [-c | --cmp] [-n N] [-t N] [--scene NAME] [--list|-l]\n"
+                   "\ttest [-h | --headless] [-c | --cmp] [-n N] [-t N] [-r NAME] [--list|-l]\n"
                    "\n"
                    "Options:\n"
                    "\t--headless | -h   Run in headless-mode (without displaying any GUIs)\n"
                    "\t-t N              Run for N ticks, then quit, or -1 to run indefinitely (default: -1)\n"
                    "\t--cmp | -c        Run in comparison mode\n"
                    "\t-n N              Log a performance measurement every N ticks (default: %d)\n"
+                   "\t-r NAME           Add a renderer of name (case-insensitive), NAME \n"
+                   "\t-rl               List available renderers\n"
                    "\n",
                    numTicksBetweenPerfMeasurements
                    );
-            exit(0);
+            return 0;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--headless") == 0) {
             isHeadless = true;
         } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
@@ -442,9 +524,49 @@ int DLT_Run(int argc, char **argv) {
                 numTicksBetweenPerfMeasurements = atoi(argv[i+1]);
                 i++;
             }
+        } else if (SDL_strcmp(argv[i], "-rl") == 0) {
+            std::vector<DLT_RendererMetadata *> sorted(DLT_AllRendererMetadata());
+            std::sort(sorted.begin(), sorted.end(),
+                [] (DLT_RendererMetadata * a, DLT_RendererMetadata * b) {
+                    return SDL_strcasecmp(a->shortName.c_str(), b->shortName.c_str()) < 0;
+                }
+            );
+            for (DLT_RendererMetadata * metadata : sorted) {
+                if (metadata->description.empty()) {
+                    printf("%s\n", metadata->shortName.c_str());
+                } else {
+                    printf("%-12s -- %s\n",
+                        metadata->shortName.c_str(),
+                        metadata->description.c_str()
+                    );
+                }
+            }
+            return 0;
+        } else if (SDL_strcmp(argv[i], "-r") == 0 || SDL_strcmp(argv[i], "--render") == 0) {
+            if (++i < argc) {
+                if ( ! DLT_AddRendererByName(argv[i])) {
+                    printf("ERROR: %s\n", DLT_GetError());
+                    return 1;
+                }
+            }
         }
     }
-    
+
+
+    if (DLT_GetEnvs().empty()) {
+        if (defaultRenderer) {
+            if ( ! DLT_AddRendererByName(defaultRenderer)) {
+                printf("ERROR: %s\n", DLT_GetError());
+                return 1;
+            }
+        }
+    }
+
+    if (DLT_GetEnvs().empty()) {
+        printf("ERROR: no renderers specified, and no, valid default is available!\n");
+        return 1;
+    }
+
     // Catch Ctrl+C
 #ifndef _MSC_VER
     struct sigaction signalHandler;
@@ -460,7 +582,7 @@ int DLT_Run(int argc, char **argv) {
             if ( ! SDL_WasInit(0)) {
                 if (SDL_Init(SDL_INIT_VIDEO) != 0) {
                     SDL_Log("Can't init SDL: %s", SDL_GetError());
-                    exit(1);
+                    return 1;
                 }
             }
         }
@@ -491,18 +613,18 @@ int DLT_Run(int argc, char **argv) {
             winX += w + winSpacingW;
             if ( ! envs[i].window) {
                 SDL_Log("SDL_CreateWindow failed, err=%s", SDL_GetError());
-                exit(1);
+                return 1;
             }
 
             SDL_Renderer * r = SDL_CreateRenderer(envs[i].window, -1, 0);
             if ( ! r) {
                 SDL_Log("SDL_CreateRenderer failed, err=%s", SDL_GetError());
-                exit(1);
+                return 1;
             }
             envs[i].texture = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
             if ( ! envs[i].texture) {
                 SDL_Log("Can't create background texture: %s", SDL_GetError());
-                exit(1);
+                return 1;
             }
         }
         if ( ! envs[i].dest) {
@@ -510,7 +632,7 @@ int DLT_Run(int argc, char **argv) {
         }
         if ( ! envs[i].dest) {
             SDL_Log("Can't create background surface: %s", SDL_GetError());
-            exit(1);
+            return 1;
         }
         SDL_FillRect(envs[i].dest, NULL, 0xFF000000);
     } // end of init loop

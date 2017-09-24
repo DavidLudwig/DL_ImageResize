@@ -13,23 +13,23 @@ struct Render_Src : public DLT_Renderer {
         //env.dest = SDL_CreateRGBSurfaceWithFormat(0, src->w, src->h, src->format->BitsPerPixel, src->format->format);
         env.dest = SDL_CreateRGBSurface(0, src->w, src->h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
     }
-    virtual std::string GetShortName() { return "SRC"; }
     virtual void Draw(DLT_Env & env) {
         SDL_Rect destRect = {0, 0, src->w, src->h};
         SDL_UpperBlit(src, NULL, env.dest, &destRect);
     }
 };
+DLT_RegisterRenderer(Render_Src, "SRC", "source image, no scaling");
 
 struct Render_Src2X : public DLT_Renderer {
     virtual void Init(DLT_Env & env) {
         env.dest = SDL_CreateRGBSurface(0, src->w * 2, src->h * 2, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
     }
-    virtual std::string GetShortName() { return "SRC2X"; }
     virtual void Draw(DLT_Env & env) {
         SDL_Rect destRect = {0, 0, src->w * 2, src->h * 2};
         SDL_BlitScaled(src, NULL, env.dest, &destRect);
     }
 };
+DLT_RegisterRenderer(Render_Src2X, "SRC2X", "source image with size * 2, via SDL_BlitScaled");
 
 
 
@@ -66,16 +66,17 @@ struct Render_ScalerBase : public DLT_Renderer {
         env.dest = SDL_CreateRGBSurfaceFrom(
             alignedBuffer, ScaleWidth, ScaleHeight, 32, (ScaleWidth * 4), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
     }
-    virtual std::string GetShortName() = 0;
+    //virtual std::string GetShortName() = 0;
     virtual void Draw(DLT_Env & env) = 0;
 };
 
 struct Render_ScaleSDL : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "SDL_BlitScaled"; }
     virtual void Draw(DLT_Env & env) {
         SDL_BlitScaled(src, NULL, env.dest, NULL);
     }
 };
+DLT_RegisterRenderer(Render_ScaleSDL, "ScaleSDL", "SDL_BlitScaled, which uses nearest-neighbor scaling");
+
 
 
 void BilinearScale1(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest, int destWidth, int destHeight) {
@@ -125,11 +126,11 @@ void BilinearScale1(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest
 }
 
 struct Render_Bilinear1 : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "Bi1"; }
     virtual void Draw(DLT_Env & env) {
         BilinearScale1((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
+DLT_RegisterRenderer(Render_Bilinear1, "Bi1", "initial, bilinear scaler, with 'float' based math");
 
 // #define FIXED 16
 // typedef int fixed;
@@ -210,41 +211,41 @@ void BilinearScale2(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest
 }
 
 struct Render_Bilinear2 : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "Bi2"; }
     virtual void Draw(DLT_Env & env) {
         BilinearScale2((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
+DLT_RegisterRenderer(Render_Bilinear2, "Bi2", "Bi1 renderer, with 'fixed-point' based math");
 
 
 extern "C" void BilinearScale3_x86(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight);
 
 struct Render_Bilinear3 : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "Bi3"; }
     virtual void Draw(DLT_Env & env) {
         BilinearScale3_x86((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
+DLT_RegisterRenderer(Render_Bilinear3, "Bi3", "post-Bi2 renderer, in hand-coded assembly, 1st pass");
 
 
 extern "C" void BilinearScale4_x86(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight);
 
 struct Render_Bilinear4 : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "Bi4"; }
     virtual void Draw(DLT_Env & env) {
         BilinearScale4_x86((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
+DLT_RegisterRenderer(Render_Bilinear4, "Bi4", "Bi3 renderer, with minor, working optimizations (on Penryn)");
 
 
 extern "C" void BilinearScale5_x86(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight);
 
 struct Render_Bilinear5 : public Render_ScalerBase {
-    virtual std::string GetShortName() { return "Bi5"; }
     virtual void Draw(DLT_Env & env) {
         BilinearScale5_x86((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
+DLT_RegisterRenderer(Render_Bilinear5, "Bi5", "Bi4 renderer, with \"optimizations\" (slower, albeit less stack use)");
 
 
 int main(int argc, char ** argv) {
@@ -260,31 +261,6 @@ int main(int argc, char ** argv) {
             if (++i < argc) {
                 srcFile = argv[i];
             }
-        } else if (SDL_strcmp(argv[i], "-r") == 0 || SDL_strcmp(argv[i], "--render") == 0) {
-            if (++i < argc) {
-                if (SDL_strcasecmp(argv[i], "Src") == 0) {
-                    DLT_AddRenderer(new Render_Src());
-                } else if (SDL_strcasecmp(argv[i], "Compare") == 0) {
-                    DLT_AddRenderer(new DLT_Render_Compare());
-                } else if (SDL_strcasecmp(argv[i], "Src2X") == 0) {
-                    DLT_AddRenderer(new Render_Src2X());
-                } else if (SDL_strcasecmp(argv[i], "ScaleSDL") == 0) {
-                    DLT_AddRenderer(new Render_ScaleSDL());
-                } else if (SDL_strcasecmp(argv[i], "Bi1") == 0) {
-                    DLT_AddRenderer(new Render_Bilinear1());
-                } else if (SDL_strcasecmp(argv[i], "Bi2") == 0) {
-                    DLT_AddRenderer(new Render_Bilinear2());
-                } else if (SDL_strcasecmp(argv[i], "Bi3") == 0) {
-                    DLT_AddRenderer(new Render_Bilinear3());
-                } else if (SDL_strcasecmp(argv[i], "Bi4") == 0) {
-                    DLT_AddRenderer(new Render_Bilinear4());
-                } else if (SDL_strcasecmp(argv[i], "Bi5") == 0) {
-                    DLT_AddRenderer(new Render_Bilinear5());
-                } else {
-                    printf("ERROR: unknown renderer, \"%s\"\n", argv[i]);
-                    exit(1);
-                }
-            }
         } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
             if (++i < argc) {
                 if (SDL_strcasecmp(argv[i], "full") == 0) {
@@ -296,10 +272,6 @@ int main(int argc, char ** argv) {
                 }
             }
         }
-    }
-
-    if (DLT_GetEnvs().empty()) {
-        DLT_AddRenderer(new Render_Src());
     }
 
     // Load source data
@@ -335,7 +307,7 @@ int main(int argc, char ** argv) {
         SDL_FreeSurface(srcTemp);
     }
     
-    return DLT_Run(argc, argv);
+    return DLT_Run(argc, argv, "Src");
 }
 
 //

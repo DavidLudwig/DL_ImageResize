@@ -4,6 +4,7 @@
 #ifndef DLTest_h
 #define DLTest_h
 
+#include <functional>
 #include <string>
 #include <vector>
 #include "SDL.h"
@@ -54,12 +55,37 @@ struct DLT_Env {
 
 std::vector<DLT_Env> & DLT_GetEnvs();
 
+struct DLT_RendererMetadata;
+
 struct DLT_Renderer {
+    DLT_RendererMetadata * metadata = NULL;
     virtual ~DLT_Renderer();
     virtual void Init(DLT_Env & env);
-    virtual std::string GetShortName() = 0;
+    const std::string & GetShortName() const;
     virtual void Draw(DLT_Env & env);
 };
+
+struct DLT_RendererMetadata {
+    std::function<DLT_Renderer *()> factory;
+    std::string shortName;
+    std::string description;
+};
+
+struct DLT_RendererRegistrar {
+    DLT_RendererRegistrar(
+        std::function<DLT_Renderer *()> factory,
+        std::string shortName,
+        std::string description = ""
+    );
+};
+
+#define DLT_RegisterRenderer(CLASS, ...) \
+    static const DLT_RendererRegistrar DLT_RendererRegistrar_##CLASS( \
+        [] () { return (DLT_Renderer *) new CLASS; }, \
+        __VA_ARGS__ \
+    );
+
+
 
 enum DLT_ComparisonType : Uint8 {
     DLT_COMPARE_A       = (1 << 0),
@@ -73,13 +99,14 @@ static DLT_ComparisonType compare = DLT_COMPARE_ARGB;
 static int compare_threshold = 0;
 struct DLT_Render_Compare : public DLT_Renderer {
     virtual void Init(DLT_Env & env);
-    virtual std::string GetShortName();
     virtual void Draw(DLT_Env & env);
 };
 
+std::vector<DLT_RendererMetadata *> & DLT_AllRendererMetadata();
+DLT_RendererMetadata * DLT_FindRendererMetadataByName(const std::string & name);
 void DLT_AddRenderer(DLT_Renderer * env);
 bool DLT_GetOtherEnvs(DLT_Env * self, DLT_Env ** other, int numOther);
-int DLT_Run(int argc, char **argv);
+int DLT_Run(int argc, char **argv, const char * defaultRendererName);
 
 
 //
