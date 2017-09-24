@@ -8,8 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		7505DBC11F7176E9003FBD03 /* x86_3.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 7505DBC01F7176E9003FBD03 /* x86_3.nasm */; };
-		755C229C1F69EB0F00BA5B58 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 755C22951F69EB0A00BA5B58 /* SDL2.framework */; };
 		75A3F9751F76B0F100D3554E /* x86_4.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 75A3F9741F76B0F100D3554E /* x86_4.nasm */; };
+		75A3F9961F772F6200D3554E /* x86_5.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 75A3F9911F772F6200D3554E /* x86_5.nasm */; };
+		75A3F9A01F7730B300D3554E /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 75A3F99F1F7730B300D3554E /* SDL2.framework */; };
 		75C101BF1F6DFE9A0003FBF6 /* DLTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 75C101BD1F6DFE9A0003FBF6 /* DLTest.cpp */; };
 		C54C38DBB68AC1CC334AB5E30D182C3EEC99B774E591400C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 956E2449E21F52346CEFA940E59024665BE2FBB166FCC874 /* main.cpp */; };
 /* End PBXBuildFile section */
@@ -23,46 +24,16 @@
 			outputFiles = (
 				"$(DERIVED_FILE_DIR)/${INPUT_FILE_BASE}.o",
 			);
-			script = "/usr/local/bin/nasm -f macho ${INPUT_FILE_PATH} -o ${SCRIPT_OUTPUT_FILE_0}\n";
+			script = "/usr/local/bin/nasm -g -f macho ${INPUT_FILE_PATH} -o ${SCRIPT_OUTPUT_FILE_0}\n";
 		};
 /* End PBXBuildRule section */
 
-/* Begin PBXContainerItemProxy section */
-		755C22941F69EB0A00BA5B58 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = BECDF66C0761BA81005FE872;
-			remoteInfo = Framework;
-		};
-		755C22961F69EB0A00BA5B58 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = BECDF6B30761BA81005FE872;
-			remoteInfo = "Static Library";
-		};
-		755C22981F69EB0A00BA5B58 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = DB31407717554B71006C0E22;
-			remoteInfo = "Shared Library";
-		};
-		755C229A1F69EB0A00BA5B58 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = BECDF6BE0761BA81005FE872;
-			remoteInfo = "Standard DMG";
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		16DE0C409870B9C9D96D03BCEAF6E4BB7EF54593BD3B4809 /* test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = test; sourceTree = BUILT_PRODUCTS_DIR; };
-		1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = external/SDL/Xcode/SDL/SDL.xcodeproj; sourceTree = SOURCE_ROOT; };
 		7505DBC01F7176E9003FBD03 /* x86_3.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_3.nasm; sourceTree = "<group>"; };
 		75A3F9741F76B0F100D3554E /* x86_4.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_4.nasm; sourceTree = "<group>"; };
+		75A3F9911F772F6200D3554E /* x86_5.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_5.nasm; sourceTree = "<group>"; };
+		75A3F99F1F7730B300D3554E /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = external/SDL2.framework; sourceTree = "<group>"; };
 		75C101BD1F6DFE9A0003FBF6 /* DLTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DLTest.cpp; sourceTree = "<group>"; };
 		75C101BE1F6DFE9A0003FBF6 /* DLTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLTest.h; sourceTree = "<group>"; };
 		956E2449E21F52346CEFA940E59024665BE2FBB166FCC874 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -73,7 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				755C229C1F69EB0F00BA5B58 /* SDL2.framework in Frameworks */,
+				75A3F9A01F7730B300D3554E /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,24 +56,23 @@
 			children = (
 				7505DBC01F7176E9003FBD03 /* x86_3.nasm */,
 				75A3F9741F76B0F100D3554E /* x86_4.nasm */,
+				75A3F9911F772F6200D3554E /* x86_5.nasm */,
 				75C101BD1F6DFE9A0003FBF6 /* DLTest.cpp */,
 				75C101BE1F6DFE9A0003FBF6 /* DLTest.h */,
 				956E2449E21F52346CEFA940E59024665BE2FBB166FCC874 /* main.cpp */,
 				DE2FD571A6C936B48E134D4D9B3FADE6BA17F9BDEA134CF4 /* Products */,
 				DE2FDC7F9D968EAA8E13545B920D05DCBA1800CBE0E0A4EA /* Projects */,
+				75A3F9881F76B77300D3554E /* Frameworks */,
 			);
 			name = test;
 			sourceTree = "<group>";
 		};
-		BD63D85F957E77C5D37D3F19AC9112F7D7BD6F909CAD0E05 /* Products */ = {
+		75A3F9881F76B77300D3554E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				755C22951F69EB0A00BA5B58 /* SDL2.framework */,
-				755C22971F69EB0A00BA5B58 /* libSDL2.a */,
-				755C22991F69EB0A00BA5B58 /* libSDL2.dylib */,
-				755C229B1F69EB0A00BA5B58 /* Standard DMG */,
+				75A3F99F1F7730B300D3554E /* SDL2.framework */,
 			);
-			name = Products;
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		DE2FD571A6C936B48E134D4D9B3FADE6BA17F9BDEA134CF4 /* Products */ = {
@@ -116,7 +86,6 @@
 		DE2FDC7F9D968EAA8E13545B920D05DCBA1800CBE0E0A4EA /* Projects */ = {
 			isa = PBXGroup;
 			children = (
-				1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */,
 			);
 			name = Projects;
 			sourceTree = "<group>";
@@ -159,49 +128,12 @@
 			);
 			mainGroup = 4AEDC5EED41CF840B54815FB4563A672908F794CD355EE80 /* test */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = BD63D85F957E77C5D37D3F19AC9112F7D7BD6F909CAD0E05 /* Products */;
-					ProjectRef = 1D105C5B91A8AF1EE3FE7561219E89D0143AB748DE93355E /* SDL.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				B31E9396E7B3FC8FF71364C937C79141FC1785CFBA45C2CF /* test */,
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		755C22951F69EB0A00BA5B58 /* SDL2.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = SDL2.framework;
-			remoteRef = 755C22941F69EB0A00BA5B58 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		755C22971F69EB0A00BA5B58 /* libSDL2.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libSDL2.a;
-			remoteRef = 755C22961F69EB0A00BA5B58 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		755C22991F69EB0A00BA5B58 /* libSDL2.dylib */ = {
-			isa = PBXReferenceProxy;
-			fileType = "compiled.mach-o.dylib";
-			path = libSDL2.dylib;
-			remoteRef = 755C22981F69EB0A00BA5B58 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		755C229B1F69EB0A00BA5B58 /* Standard DMG */ = {
-			isa = PBXReferenceProxy;
-			fileType = "compiled.mach-o.executable";
-			path = "Standard DMG";
-			remoteRef = 755C229A1F69EB0A00BA5B58 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A5180929AF0AB359AFD4BD32191D354BEBE77EDBB2482199 /* Resources */ = {
@@ -220,6 +152,7 @@
 			files = (
 				75A3F9751F76B0F100D3554E /* x86_4.nasm in Sources */,
 				C54C38DBB68AC1CC334AB5E30D182C3EEC99B774E591400C /* main.cpp in Sources */,
+				75A3F9961F772F6200D3554E /* x86_5.nasm in Sources */,
 				75C101BF1F6DFE9A0003FBF6 /* DLTest.cpp in Sources */,
 				7505DBC11F7176E9003FBD03 /* x86_3.nasm in Sources */,
 			);
@@ -294,6 +227,11 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CONFIGURATION_BUILD_DIR = bin/Release;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(PROJECT_DIR)/external",
+				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				INSTALL_PATH = /usr/local/bin;
 				PRODUCT_NAME = test;
@@ -306,6 +244,11 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CONFIGURATION_BUILD_DIR = bin/Debug;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(PROJECT_DIR)/external",
+				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				INSTALL_PATH = /usr/local/bin;
 				PRODUCT_NAME = test;

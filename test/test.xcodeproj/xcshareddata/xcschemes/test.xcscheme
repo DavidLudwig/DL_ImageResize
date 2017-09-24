@@ -69,7 +69,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-r bi3"
+            argument = "-r bi4"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
