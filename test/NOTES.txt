@@ -1,62 +1,62 @@
 
 INITIAL
-					X-loop READS    X-loop WRITES
-ratioDestXtoSrcX	xx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x
-diffX				x				x
-destY 				
-destX 				xxx				x
-srcPitch 			xx
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES
+ratioDestXtoSrcX    xx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x
+diffX               x               x
+destY               
+destX               xxx             x
+srcPitch            xx
+src                 x
+dest                x               x
+destWidth           x
 
 
 + destX --> edi
-					X-loop READS    X-loop WRITES	REGISTER
-ratioDestXtoSrcX	xx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x
-diffX				x				x 			
-destY 				
-destX 				xxx				x 				edi
-srcPitch 			xx
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES   REGISTER
+ratioDestXtoSrcX    xx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x
+diffX               x               x           
+destY               
+destX               xxx             x               edi
+srcPitch            xx
+src                 x
+dest                x               x
+destWidth           x
 
 
 + destX --> temp
-					X-loop READS    X-loop WRITES	REGISTER
-ratioDestXtoSrcX	xx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x
-diffX				x				x 				temp,eax
-destY 				
-destX 				xxx				x 				edi
-srcPitch 			xx
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES   REGISTER
+ratioDestXtoSrcX    xx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x
+diffX               x               x               temp,eax
+destY               
+destX               xxx             x               edi
+srcPitch            xx
+src                 x
+dest                x               x
+destWidth           x
 
 
 + srcPitch --> esi
-					X-loop READS    X-loop WRITES	REGISTER
-ratioDestXtoSrcX	xx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x
-diffX				x				x 				temp,eax
-destY 				
-destX 				xxx				x 				edi
-srcPitch 			xx 								esi
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES   REGISTER
+ratioDestXtoSrcX    xx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x
+diffX               x               x               temp,eax
+destY               
+destX               xxx             x               edi
+srcPitch            xx                              esi
+src                 x
+dest                x               x
+destWidth           x
 
 
 ----------
@@ -64,31 +64,243 @@ bi5 START
 ----------
 
 + srcX --> temp
-					X-loop READS    X-loop WRITES	REGISTER
-ratioDestXtoSrcX	xx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x 				temp,ebx
-diffX				x				x 				temp,eax
-destY 				
-destX 				xxx				x 				edi
-srcPitch 			xx 								esi
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES   REGISTER
+ratioDestXtoSrcX    xx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x               temp,ebx
+diffX               x               x               temp,eax
+destY               
+destX               xxx             x               edi
+srcPitch            xx                              esi
+src                 x
+dest                x               x
+destWidth           x
 
 
 + ratioDestXtoSrcX --> ecx
-					X-loop READS    X-loop WRITES	REGISTER
-ratioDestXtoSrcX	xx 								ecx
-ratioDestYtoSrcY	
-srcY 				x
-srcX 				x				x 				temp,ebx
-diffX				x				x 				temp,eax
-destY 				
-destX 				xxx				x 				edi
-srcPitch 			xx 								esi
-src 				x
-dest 				x 				x
-destWidth 			x
+                    X-loop READS    X-loop WRITES   REGISTER
+ratioDestXtoSrcX    xx                              ecx
+ratioDestYtoSrcY    
+srcY                x
+srcX                x               x               temp,ebx
+diffX               x               x               temp,eax
+destY               
+destX               xxx             x               edi
+srcPitch            xx                              esi
+src                 x
+dest                x               x
+destWidth           x
+
+
+
+------------
+bi2 disassembly stuff
+
+nDestY = eax;
+var_44 = (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14) * nSrcWidth;
+          ------------------------------
+                 fx22_10_SrcY_temp1
+
+          -------------------------------------
+                    fx12_20_SrcY_temp2
+
+          ----------------------------------------------
+                            nSrcY_temp3
+
+          ----------------------------------------------------------
+                              nSrcYRowStart
+
+
+
+nDestY = eax;
+var_1C = (eax * fx22_10_RatioDestYToSrcY & 0x3fffff) - (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14 << 0xa);
+
+         -------------------------------               -------------------------------
+                fx22_10_SrcY_temp1                           fx22_10_SrcY_temp1
+
+         ------------------------------------------    --------------------------------------
+              LIMIT(fx22_10_SrcY_temp2, 4095)                     fx12_20_SrcY_temp2 
+
+                                                       ----------------------------------------------
+                                                                         nSrcY_temp3
+
+                                                       ------------------------------------------------------
+                                                                  fx22_10_SrcY_temp4_integer_part
+
+         ----------------------------------------------------------------------------------------------------
+                                                  fx22_10_DiffY
+
+
+
+nDestY = eax
+var_40 = (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14 << 0xa) + (0x400 - (eax * fx22_10_RatioDestYToSrcY & 0x3fffff));
+
+         ------------------------------------------------------            --------------------------------------------
+                    fx22_10_SrcY_temp4_integer_part                             LIMIT(fx22_10_SrcY_temp2, 4095)
+
+                                                                  -----------------------------------------------------
+                                                                              fx22_10(1 - SrcY)
+
+         --------------------------------------------------------------------------------------------------------------
+                                                        ?
+
+
+
+esi = pSrcPixels;
+var_28 = *(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4);
+
+                  ----------------------
+                        nSrcX_temp
+
+                 ----------------------------------------
+                               nSrcXYStart
+
+                 -----------------------------------------------
+                                  nSrcXYByteStart
+
+          ------------------------------------------------------
+                               pSrcPixelXY
+
+
+         --------------------------------------------------------
+                              colorSrcPixelXY
+
+
+
+mov        dword [ebp+nDestY], eax ; CODE XREF=__Z14BilinearScale2PjiiS_ii+542
+; nDestY = eax
+
+mov        ebx, eax
+; ebx = eax
+; (ebx = nDestY)
+
+imul       ebx, dword [ebp+fx22_10_RatioDestYToSrcY]
+; ebx *= [fx22_10_RatioDestYToSrcY]
+; (ebx (nDestY) *= [fx22_10_RatioDestYToSrcY])
+; (ebx = fx22_10_SrcY)
+
+mov        edx, ebx
+; edx = ebx
+; (edx = fx22_10_SrcY)
+
+shl        edx, 0xa
+; edx <<= 10
+; (edx = fx12_20_SrcY)
+
+shr        edx, 0x14
+; edx >>= 20
+; (edx = nSrcY)
+
+and        ebx, 0x3fffff
+; ebx &= 0x3fffff
+; (ebx (fx22_10_SrcY) = MIN(fx22_10_SrcY, 4095))
+
+mov        eax, edx
+; eax = edx
+; (eax = nSrcY)
+
+shl        eax, 0xa
+; eax <<= 10
+; (eax (nSrcY) <<= 10)
+; eax = fx22_10_SrcY_integer_part
+
+sub        ebx, eax
+; ebx -= eax
+; (ebx (MIN(fx22_10_SrcY, 4095)) -= fx22_10_SrcY_integer_part)
+; (ebx = fx22_10_SrcY_fractional_part)
+; (ebx = fx22_10_DiffY)
+
+imul       edx, dword [ebp+nSrcWidth]
+; edx *= [nSrcWidth]
+; (edx (nSrcY) *= [nSrcWidth])
+; (edx = nSrcYRowStart)
+
+mov        dword [ebp+nSrcYRowStart], edx
+; [nSrcYRowStart] = edx
+
+mov        eax, 0x400
+; eax = 0x400
+; (eax = fx22_10_one)
+
+mov        dword [ebp+fx22_10_DiffY], ebx
+; [fx22_10_DiffY] = ebx
+; ([fx22_10_DiffY] = fx22_10_DiffY)
+
+sub        eax, ebx
+; eax -= ebx
+; eax (fx22_10_one) -= ebx (fx22_10_DiffY)
+; eax = fx22_10_one_minus_DiffY
+
+mov        dword [ebp+var_40], eax
+; [var_40] = eax
+; ([var_40] = eax (fx22_10_one_minus_DiffY))
+; ([var_40] = fx22_10_one_minus_DiffY)
+
+xor        edx, edx
+mov        eax, dword [ebp+nDestWidth]
+mov        dword [ebp+pDestPixelsY], ecx
+mov        ebx, ecx
+nop        dword [eax]
+
+ebx = nDestY
+
+ebx (nDestY) *= fx22_10_RatioDestYToSrcY
+; ebx = fx22_10_SrcY
+
+edx = ebx
+; edx = fx22_10_SrcY
+
+shl edx
+
+
+
+int __Z14BilinearScale2PjiiS_ii(uint32_t * pSrcPixels, int nSrcWidth, int nSrcHeight, uint32_t * pDestPixels, int nDestWidth, int nDestHeight) {
+    edi = ((nSrcWidth << 0xa) + 0xfffffc00) / nDestWidth;
+    eax = ((nSrcHeight << 0xa) + 0xfffffc00) / nDestHeight;
+    fx22_10_RatioDestYToSrcY = eax;
+    if ((nDestHeight > 0x0) && (nDestWidth > 0x0)) {
+            ecx = pDestPixels;
+            esi = pSrcPixels;
+            nDestPitch = nDestWidth * 0x4;
+            eax = 0x0;
+            fx12_20_RatioDestXtoSrcX = edi << 0xa;
+            do {
+                    nDestY = eax;
+                    nSrcYRowStart = (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14) * nSrcWidth;
+                    fx22_10_DiffY = (eax * fx22_10_RatioDestYToSrcY & 0x3fffff) - (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14 << 0xa);
+                    fx22_10_one_minus_DiffY = (eax * fx22_10_RatioDestYToSrcY << 0xa >> 0x14 << 0xa) + (0x400 - (eax * fx22_10_RatioDestYToSrcY & 0x3fffff));
+                    edx = 0x0;
+                    eax = nDestWidth;
+                    pDestPixelsY = ecx;
+                    ebx = ecx;
+                    do {
+                            pDestPixelsXY = ebx;
+                            nDestWidthRemaining = eax;
+                            fx12_20_SrcX = edx;
+                            colorSrcPixelXY = *(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4);
+                            eax = (*(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4) << 0xa & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_DiffY >> 0xa) + (*(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) << 0xa & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_one_minus_DiffY >> 0xa) + (*(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4) << 0xa & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_one_minus_DiffY >> 0xa);
+                            edi = *(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) << 0xa;
+                            edi = (edi & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_DiffY >> 0xa) + eax;
+                            eax = *(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) * 0x4;
+                            ecx = *(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4) * 0x4;
+                            ecx = (ecx & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_DiffY >> 0xa) + (eax & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_one_minus_DiffY >> 0xa) + (colorSrcPixelXY * 0x4 & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_one_minus_DiffY >> 0xa);
+                            eax = *(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) * 0x4;
+                            ebx = *(esi + ((fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) >> 0x6;
+                            esi = *(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4) >> 0x6;
+                            edx = *(pSrcPixels + (nSrcWidth + (fx12_20_SrcX >> 0x14) + nSrcYRowStart) * 0x4 + 0x4) >> 0x6;
+                            edx = (edx & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_DiffY >> 0xa) + (esi & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_DiffY >> 0xa) + (ebx & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_one_minus_DiffY >> 0xa) + (colorSrcPixelXY >> 0x6 & 0x3fc00) * (((fx12_20_SrcX >> 0x14 << 0xa) + (0x400 - (fx12_20_SrcX >> 0xa))) * fx22_10_one_minus_DiffY >> 0xa);
+                            esi = pSrcPixels;
+                            *pDestPixelsXY = ((eax & 0x3fc00) * (((fx12_20_SrcX >> 0xa) - (fx12_20_SrcX >> 0x14 << 0xa)) * fx22_10_DiffY >> 0xa) + ecx >> 0xc & 0xff00 | edi >> 0x14) + (edx >> 0x4 & 0xff0000) + 0xff000000;
+                            ebx = pDestPixelsXY + 0x4;
+                            edx = fx12_20_SrcX + fx12_20_RatioDestXtoSrcX;
+                            eax = nDestWidthRemaining - 0x1;
+                    } while (eax != 0x0);
+                    eax = nDestY + 0x1;
+                    ecx = pDestPixelsY + nDestPitch;
+            } while (eax != nDestHeight);
+    }
+    return eax;
+}
+
 
