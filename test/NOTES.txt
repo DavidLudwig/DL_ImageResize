@@ -57,3 +57,38 @@ srcPitch 			xx 								esi
 src 				x
 dest 				x 				x
 destWidth 			x
+
+
+----------
+bi5 START
+----------
+
++ srcX --> temp
+					X-loop READS    X-loop WRITES	REGISTER
+ratioDestXtoSrcX	xx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x 				temp,ebx
+diffX				x				x 				temp,eax
+destY 				
+destX 				xxx				x 				edi
+srcPitch 			xx 								esi
+src 				x
+dest 				x 				x
+destWidth 			x
+
+
++ ratioDestXtoSrcX --> ecx
+					X-loop READS    X-loop WRITES	REGISTER
+ratioDestXtoSrcX	xx 								ecx
+ratioDestYtoSrcY	
+srcY 				x
+srcX 				x				x 				temp,ebx
+diffX				x				x 				temp,eax
+destY 				
+destX 				xxx				x 				edi
+srcPitch 			xx 								esi
+src 				x
+dest 				x 				x
+destWidth 			x
+

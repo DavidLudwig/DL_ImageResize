@@ -237,6 +237,15 @@ struct Render_Bilinear4 : public Render_ScalerBase {
 };
 
 
+extern "C" void BilinearScale5_x86(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight);
+
+struct Render_Bilinear5 : public Render_ScalerBase {
+    virtual std::string GetShortName() { return "Bi5"; }
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale5_x86((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+
 
 int main(int argc, char ** argv) {
     std::string srcFile;
@@ -269,6 +278,8 @@ int main(int argc, char ** argv) {
                     DLT_AddRenderer(new Render_Bilinear3());
                 } else if (SDL_strcasecmp(argv[i], "Bi4") == 0) {
                     DLT_AddRenderer(new Render_Bilinear4());
+                } else if (SDL_strcasecmp(argv[i], "Bi5") == 0) {
+                    DLT_AddRenderer(new Render_Bilinear5());
                 } else {
                     printf("ERROR: unknown renderer, \"%s\"\n", argv[i]);
                     exit(1);
