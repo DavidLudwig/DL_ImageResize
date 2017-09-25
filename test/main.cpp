@@ -248,6 +248,81 @@ struct Render_Bilinear5 : public Render_ScalerBase {
 DLT_RegisterRenderer(Render_Bilinear5, "Bi5", "Bi4 renderer, with \"optimizations\" (slower, albeit less stack use)");
 
 
+
+#include "emmintrin.h"  // SSE2
+#include "smmintrin.h"  // SSE4.1
+#include "tmmintrin.h"  // SSSE3
+
+void BilinearScale6(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight) {
+    int srcX, srcY, srcIndex;
+
+    fixed ratioDestXtoSrcX = (((srcWidth - 1)<<FIXED) / destWidth);
+    fixed ratioDestYToSrcY = (((srcHeight - 1)<<FIXED) / destHeight);
+    fixedbig diffX, diffY;
+    
+    int destIndex = 0;
+    for (int destY = 0; destY < destHeight; destY++) {
+        srcY = ((fixedbig)ratioDestYToSrcY * (fixedbig)(destY<<FIXED))>>(FIXED*2);
+        diffY = (((fixedbig)ratioDestYToSrcY * (fixedbig)(destY<<FIXED))>>FIXED) - (srcY << FIXED);
+        // diffY = (((fixedbig)ratioDestYToSrcY * (fixedbig)(destY<<FIXED))>>FIXED) & FRAC_BITS;
+
+        for (int destX = 0; destX < destWidth; destX++) {
+            srcX  =  ((fixedbig)ratioDestXtoSrcX * (fixedbig)(destX<<FIXED))>>(FIXED*2);
+            diffX = (((fixedbig)ratioDestXtoSrcX * (fixedbig)(destX<<FIXED))>>FIXED) - (srcX << FIXED);
+            // diffX = (((fixedbig)ratioDestXToSrcX * (fixedbig)(destX<<FIXED))>>FIXED) & FRAC_BITS;
+
+            srcIndex = (srcY * srcWidth + srcX);
+
+            __m128i s01 = _mm_loadl_epi64((__m128i const*)(src + srcIndex));
+            __m128i s23 = _mm_loadl_epi64((__m128i const*)(src + srcIndex + srcWidth));
+            __m128i s__23 = _mm_slli_si128(s23, 8);
+            __m128i s0123 = _mm_or_si128(s01, s__23);
+            
+            __m128i reds   = _mm_slli_epi32(_mm_srli_epi32(_mm_slli_epi32(s0123,  8), 24), FIXED);
+            __m128i greens = _mm_slli_epi32(_mm_srli_epi32(_mm_slli_epi32(s0123, 16), 24), FIXED);
+            __m128i blues  = _mm_slli_epi32(_mm_srli_epi32(_mm_slli_epi32(s0123, 24), 24), FIXED);
+            
+            fixedbig factor3 = ((             diffX) * (             diffY)) >> FIXED;
+            fixedbig factor2 = (((1<<FIXED) - diffX) * (             diffY)) >> FIXED;
+            fixedbig factor1 = ((             diffX) * ((1<<FIXED) - diffY)) >> FIXED;
+            fixedbig factor0 = (((1<<FIXED) - diffX) * ((1<<FIXED) - diffY)) >> FIXED;
+
+            __m128i factors = _mm_setr_epi32(factor0, factor1, factor2, factor3);
+
+            __m128i reds2   = _mm_srli_epi32(_mm_mullo_epi32(reds,   factors), FIXED);
+            __m128i greens2 = _mm_srli_epi32(_mm_mullo_epi32(greens, factors), FIXED);
+            __m128i blues2  = _mm_srli_epi32(_mm_mullo_epi32(blues,  factors), FIXED);
+            
+            __m128i reds3   = _mm_hadd_epi32(reds2,   reds2);
+            __m128i greens3 = _mm_hadd_epi32(greens2, greens2);
+            __m128i blues3  = _mm_hadd_epi32(blues2,  blues2);
+
+            __m128i reds4   = _mm_hadd_epi32(reds3,   reds3);
+            __m128i greens4 = _mm_hadd_epi32(greens3, greens3);
+            __m128i blues4  = _mm_hadd_epi32(blues3,  blues3);
+
+            uint32_t red5 = _mm_extract_epi32(reds4,     0);
+            uint32_t green5 = _mm_extract_epi32(greens4, 0);
+            uint32_t blue5 = _mm_extract_epi32(blues4,   0);
+            
+            dest[destIndex++] =
+                0xff000000 |
+                (((red5  >>FIXED) << 16) & 0xff0000) |
+                (((green5>>FIXED) <<  8) &   0xff00) |
+                 ((blue5 >>FIXED) <<  0);
+        }
+    }
+}
+
+struct Render_Bilinear6 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale6((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear6, "Bi6", "Bi2 renderer, with Bi3 style SSE 4.1 use, via intrinsics");
+
+
+
 int main(int argc, char ** argv) {
     std::string srcFile;
     

@@ -46,6 +46,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      enableAddressSanitizer = "YES"
       language = ""
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
@@ -69,7 +70,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-r bi4"
+            argument = "-r bi2b"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

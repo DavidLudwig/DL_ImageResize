@@ -178,7 +178,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OBJROOT = obj/Release;
 				ONLY_ACTIVE_ARCH = NO;
-				OTHER_CFLAGS = "-std=c++11";
+				OTHER_CFLAGS = (
+					"-std=c++11",
+					"-msse4.1",
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					OpenGL,
@@ -209,7 +212,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OBJROOT = obj/Debug;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = "-std=c++11";
+				OTHER_CFLAGS = (
+					"-std=c++11",
+					"-msse4.1",
+				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					OpenGL,
