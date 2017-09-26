@@ -137,15 +137,23 @@ DLT_RegisterRenderer(Render_Bilinear1, "Bi1", "initial, bilinear scaler, with 'f
 // typedef int64_t fixedbig;
 
 #if 1
+    // WORKS!
     #define FIXED 10
     #define FRAC_BITS 0x3FF
     typedef uint32_t fixed;
     typedef uint32_t fixedbig;
-#else
+#elif 0
+    // ALSO WORKS!
     #define FIXED 10
     // #define FRAC_BITS 0x3FF
     typedef uint16_t fixed;
     typedef uint32_t fixedbig;
+#else
+    // FAILS, pretty much: chops off right edge
+    #define FIXED 6
+    // #define FRAC_BITS 0x3FF
+    typedef uint16_t fixed;
+    typedef uint16_t fixedbig;
 #endif
 
 
