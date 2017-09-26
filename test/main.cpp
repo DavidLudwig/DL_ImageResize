@@ -322,6 +322,649 @@ struct Render_Bilinear6 : public Render_ScalerBase {
 DLT_RegisterRenderer(Render_Bilinear6, "Bi6", "Bi2 renderer, with Bi3 style SSE 4.1 use, via intrinsics");
 
 
+void BilinearScale7(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uint32_t * dest, uint32_t nDestWidth, uint32_t nDestHeight) {
+    // uint32_t s0, s1, s2, s3;
+    __m128i vs0, vs1, vs2, vs3;
+
+    // uint32_t nSrcX, nSrcY, nSrcIndex;
+    uint32_t nSrcY;
+    __m128i vnSrcX, vnSrcIndex;
+
+    // fixed fx22_10_RatioDestXtoSrcX = (((nSrcWidth - 1)<<FIXED) / nDestWidth);
+    __m128i vfx22_10_RatioDestXtoSrcX = _mm_set1_epi32(((nSrcWidth - 1)<<FIXED) / nDestWidth);
+
+    fixed nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    //fixedbig diffX, diffY;
+    // fixedbig fx22_10_DiffX, fx22_10_DiffY;
+    fixedbig fx22_10_DiffY;
+    __m128i vfx22_10_DiffX;
+
+    // fixedbig fx22_10_Blue, fx22_10_Green, fx22_10_Red;
+    __m128i vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
+
+    int nDestIndex = 0;
+    for (int nDestY = 0; nDestY < nDestHeight; nDestY++) {
+        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+
+        for (int nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
+            __m128i vnDestX = _mm_setr_epi32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
+
+            // nSrcX  =  (fx22_10_RatioDestXtoSrcX * (nDestX<<FIXED)) >> (FIXED*2);
+            vnSrcX = _mm_srli_epi32(_mm_mullo_epi32(vfx22_10_RatioDestXtoSrcX, _mm_slli_epi32(vnDestX, FIXED)), FIXED*2);
+
+            // fx22_10_DiffX = ((fx22_10_RatioDestXtoSrcX * (nDestX<<FIXED))>>FIXED) - (nSrcX << FIXED);
+            vfx22_10_DiffX = _mm_sub_epi32(
+                _mm_srli_epi32(_mm_mullo_epi32(vfx22_10_RatioDestXtoSrcX, _mm_slli_epi32(vnDestX, FIXED)), FIXED),
+                _mm_slli_epi32(vnSrcX, FIXED)
+            );
+
+            // nSrcIndex = (nSrcY * nSrcWidth + nSrcX);
+            vnSrcIndex = _mm_add_epi32(
+                _mm_set1_epi32(nSrcY * nSrcWidth),
+                vnSrcX
+            );
+
+            // s0 = src[nSrcIndex];
+            vs0 = _mm_setr_epi32(
+                src[_mm_extract_epi32(vnSrcIndex, 0)],
+                src[_mm_extract_epi32(vnSrcIndex, 1)],
+                src[_mm_extract_epi32(vnSrcIndex, 2)],
+                src[_mm_extract_epi32(vnSrcIndex, 3)]
+            );
+
+            // s1 = src[nSrcIndex + 1];
+            vs1 = _mm_setr_epi32(
+                src[_mm_extract_epi32(vnSrcIndex, 0) + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 1) + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 2) + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 3) + 1]
+            );
+
+            // s2 = src[nSrcIndex + nSrcWidth];
+            vs2 = _mm_setr_epi32(
+                src[_mm_extract_epi32(vnSrcIndex, 0) + nSrcWidth],
+                src[_mm_extract_epi32(vnSrcIndex, 1) + nSrcWidth],
+                src[_mm_extract_epi32(vnSrcIndex, 2) + nSrcWidth],
+                src[_mm_extract_epi32(vnSrcIndex, 3) + nSrcWidth]
+            );
+
+            // s3 = src[nSrcIndex + nSrcWidth + 1];
+            vs3 = _mm_setr_epi32(
+                src[_mm_extract_epi32(vnSrcIndex, 0) + nSrcWidth + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 1) + nSrcWidth + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 2) + nSrcWidth + 1],
+                src[_mm_extract_epi32(vnSrcIndex, 3) + nSrcWidth + 1]
+            );
+
+            // fixedbig fx22_10_Factor3 = ((             fx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            __m128i vfx22_10_Factor3 = _mm_srli_epi32(
+                _mm_mullo_epi32(
+                    vfx22_10_DiffX,
+                    _mm_set1_epi32(fx22_10_DiffY)
+                ),
+                FIXED
+            );
+
+            // fixedbig fx22_10_Factor2 = (((1<<FIXED) - fx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            __m128i vfx22_10_Factor2 = _mm_srli_epi32(
+                _mm_mullo_epi32(
+                    _mm_sub_epi32(
+                        _mm_set1_epi32(1<<FIXED),
+                        vfx22_10_DiffX
+                    ),
+                    _mm_set1_epi32(fx22_10_DiffY)
+                ),
+                FIXED
+            );
+
+            // fixedbig fx22_10_Factor1 = ((             fx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+            __m128i vfx22_10_Factor1 = _mm_srli_epi32(
+                _mm_mullo_epi32(
+                    vfx22_10_DiffX,
+                    _mm_set1_epi32((1<<FIXED) - fx22_10_DiffY)
+                ),
+                FIXED
+            );
+
+            // fixedbig fx22_10_Factor0 = (((1<<FIXED) - fx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+            __m128i vfx22_10_Factor0 = _mm_srli_epi32(
+                _mm_mullo_epi32(
+                    _mm_sub_epi32(
+                        _mm_set1_epi32(1<<FIXED),
+                        vfx22_10_DiffX
+                    ),
+                    _mm_set1_epi32((1<<FIXED) - fx22_10_DiffY)
+                ),
+                FIXED
+            );
+
+            // fx22_10_Blue = ( \
+            //     (((s0    ) & 0xff)<<FIXED) * fx22_10_Factor0 +
+            //     (((s1    ) & 0xff)<<FIXED) * fx22_10_Factor1 +
+            //     (((s2    ) & 0xff)<<FIXED) * fx22_10_Factor2 +
+            //     (((s3    ) & 0xff)<<FIXED) * fx22_10_Factor3
+            // ) >> FIXED;
+            vfx22_10_Blue = _mm_srli_epi32(
+                _mm_add_epi32(
+                    _mm_add_epi32(
+                        _mm_add_epi32(
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        vs0,
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor0
+                            ),
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        vs1,
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor1
+                            )
+                        ),
+                        _mm_mullo_epi32(
+                            _mm_slli_epi32(
+                                _mm_and_si128(
+                                    vs2,
+                                    _mm_set1_epi32(0xff)
+                                ),
+                                FIXED
+                            ),
+                            vfx22_10_Factor2
+                        )
+                    ),
+                    _mm_mullo_epi32(
+                        _mm_slli_epi32(
+                            _mm_and_si128(
+                                vs3,
+                                _mm_set1_epi32(0xff)
+                            ),
+                            FIXED
+                        ),
+                        vfx22_10_Factor3
+                    )
+                ),
+                FIXED
+            );
+
+            // fx22_10_Green = ( \
+            //     (((s0>> 8) & 0xff)<<FIXED) * fx22_10_Factor0 +
+            //     (((s1>> 8) & 0xff)<<FIXED) * fx22_10_Factor1 +
+            //     (((s2>> 8) & 0xff)<<FIXED) * fx22_10_Factor2 +
+            //     (((s3>> 8) & 0xff)<<FIXED) * fx22_10_Factor3
+            // ) >> FIXED;
+            vfx22_10_Green = _mm_srli_epi32(
+                _mm_add_epi32(
+                    _mm_add_epi32(
+                        _mm_add_epi32(
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        _mm_srli_epi32(
+                                            vs0,
+                                            8
+                                        ),
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor0
+                            ),
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        _mm_srli_epi32(
+                                            vs1,
+                                            8
+                                        ),
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor1
+                            )
+                        ),
+                        _mm_mullo_epi32(
+                            _mm_slli_epi32(
+                                _mm_and_si128(
+                                    _mm_srli_epi32(
+                                        vs2,
+                                        8
+                                    ),
+                                    _mm_set1_epi32(0xff)
+                                ),
+                                FIXED
+                            ),
+                            vfx22_10_Factor2
+                        )
+                    ),
+                    _mm_mullo_epi32(
+                        _mm_slli_epi32(
+                            _mm_and_si128(
+                                _mm_srli_epi32(
+                                    vs3,
+                                    8
+                                ),
+                                _mm_set1_epi32(0xff)
+                            ),
+                            FIXED
+                        ),
+                        vfx22_10_Factor3
+                    )
+                ),
+                FIXED
+            );
+
+            // fx22_10_Red = ( \
+            //     (((s0>>16) & 0xff)<<FIXED) * fx22_10_Factor0 +
+            //     (((s1>>16) & 0xff)<<FIXED) * fx22_10_Factor1 +
+            //     (((s2>>16) & 0xff)<<FIXED) * fx22_10_Factor2 +
+            //     (((s3>>16) & 0xff)<<FIXED) * fx22_10_Factor3
+            // ) >> FIXED;
+            vfx22_10_Red = _mm_srli_epi32(
+                _mm_add_epi32(
+                    _mm_add_epi32(
+                        _mm_add_epi32(
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        _mm_srli_epi32(
+                                            vs0,
+                                            16
+                                        ),
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor0
+                            ),
+                            _mm_mullo_epi32(
+                                _mm_slli_epi32(
+                                    _mm_and_si128(
+                                        _mm_srli_epi32(
+                                            vs1,
+                                            16
+                                        ),
+                                        _mm_set1_epi32(0xff)
+                                    ),
+                                    FIXED
+                                ),
+                                vfx22_10_Factor1
+                            )
+                        ),
+                        _mm_mullo_epi32(
+                            _mm_slli_epi32(
+                                _mm_and_si128(
+                                    _mm_srli_epi32(
+                                        vs2,
+                                        16
+                                    ),
+                                    _mm_set1_epi32(0xff)
+                                ),
+                                FIXED
+                            ),
+                            vfx22_10_Factor2
+                        )
+                    ),
+                    _mm_mullo_epi32(
+                        _mm_slli_epi32(
+                            _mm_and_si128(
+                                _mm_srli_epi32(
+                                    vs3,
+                                    16
+                                ),
+                                _mm_set1_epi32(0xff)
+                            ),
+                            FIXED
+                        ),
+                        vfx22_10_Factor3
+                    )
+                ),
+                FIXED
+            );
+
+            // dest[nDestIndex++] =
+            //     0xff000000 |
+            //     (((fx22_10_Red  >>FIXED) << 16) & 0xff0000) |
+            //     (((fx22_10_Green>>FIXED) <<  8) &   0xff00) |
+            //      ((fx22_10_Blue >>FIXED) <<  0);
+            dest[nDestIndex++] =
+                0xff000000 |
+                (((_mm_extract_epi32(vfx22_10_Red, 0)  >>FIXED) << 16) & 0xff0000) |
+                (((_mm_extract_epi32(vfx22_10_Green, 0)>>FIXED) <<  8) &   0xff00) |
+                 ((_mm_extract_epi32(vfx22_10_Blue, 0) >>FIXED) <<  0);
+            dest[nDestIndex++] =
+                0xff000000 |
+                (((_mm_extract_epi32(vfx22_10_Red, 1)  >>FIXED) << 16) & 0xff0000) |
+                (((_mm_extract_epi32(vfx22_10_Green, 1)>>FIXED) <<  8) &   0xff00) |
+                 ((_mm_extract_epi32(vfx22_10_Blue, 1) >>FIXED) <<  0);
+            dest[nDestIndex++] =
+                0xff000000 |
+                (((_mm_extract_epi32(vfx22_10_Red, 2)  >>FIXED) << 16) & 0xff0000) |
+                (((_mm_extract_epi32(vfx22_10_Green, 2)>>FIXED) <<  8) &   0xff00) |
+                 ((_mm_extract_epi32(vfx22_10_Blue, 2) >>FIXED) <<  0);
+            dest[nDestIndex++] =
+                0xff000000 |
+                (((_mm_extract_epi32(vfx22_10_Red, 3)  >>FIXED) << 16) & 0xff0000) |
+                (((_mm_extract_epi32(vfx22_10_Green, 3)>>FIXED) <<  8) &   0xff00) |
+                 ((_mm_extract_epi32(vfx22_10_Blue, 3) >>FIXED) <<  0);
+        }
+    }
+}
+
+struct Render_Bilinear7 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale7((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear7, "Bi7", "Bi2 renderer, with 4 pixels at once via SSE 4.1 intrinsics");
+
+
+
+struct vec4u32 {
+    __m128i data;
+
+    inline vec4u32() = default;
+    inline vec4u32(__m128i src) : data(src) {}
+    inline vec4u32(uint32_t scalar) : data(_mm_set1_epi32(scalar)) {}
+    inline vec4u32(uint32_t scalar0, uint32_t scalar1, uint32_t scalar2, uint32_t scalar3) : data(_mm_setr_epi32(scalar0,scalar1,scalar2,scalar3)) {}
+
+    inline vec4u32  operator +  (const vec4u32 & b) const { return _mm_add_epi32(data, b.data);   }
+    inline vec4u32  operator -  (const vec4u32 & b) const { return _mm_sub_epi32(data, b.data);   }
+    inline vec4u32  operator *  (const vec4u32 & b) const { return _mm_mullo_epi32(data, b.data); }
+    inline vec4u32  operator &  (uint32_t scalar)   const { return _mm_and_si128(data, _mm_set1_epi32(scalar)); }
+    inline vec4u32  operator << (int imm8)          const { return _mm_slli_epi32(data, imm8);    }
+    inline vec4u32  operator >> (int imm8)          const { return _mm_srli_epi32(data, imm8);    }
+    inline uint32_t getu32      (int imm8)          const { return _mm_extract_epi32(data, imm8); }
+};
+
+inline vec4u32 operator + (uint32_t scalar, const vec4u32 & b) { return vec4u32(scalar) + b; }
+inline vec4u32 operator - (uint32_t scalar, const vec4u32 & b) { return vec4u32(scalar) - b; }
+
+#if 1
+// using a macro is slightly faster, in at least some cases
+#define vec4u32_loadFromOffsets4x32(src, offsets, extraOffset) { \
+    src[_mm_extract_epi32(offsets.data, 0) + extraOffset],       \
+    src[_mm_extract_epi32(offsets.data, 1) + extraOffset],       \
+    src[_mm_extract_epi32(offsets.data, 2) + extraOffset],       \
+    src[_mm_extract_epi32(offsets.data, 3) + extraOffset]        \
+}
+#else
+inline vec4u32 vec4u32_loadFromOffsets4x32(const uint32_t * src, const vec4u32 & offsets, const uint32_t & extraOffset) {
+    return {
+        src[_mm_extract_epi32(offsets.data, 0) + extraOffset],
+        src[_mm_extract_epi32(offsets.data, 1) + extraOffset],
+        src[_mm_extract_epi32(offsets.data, 2) + extraOffset],
+        src[_mm_extract_epi32(offsets.data, 3) + extraOffset]
+    };
+}
+#endif
+
+#if 1
+#define vec4u32_store_RGB(dest, nDestIndex, vfx22_10_Red, vfx22_10_Green, vfx22_10_Blue) \
+    dest[nDestIndex  ] =                                            \
+        0xff000000 |                                                \
+        (((vfx22_10_Red.getu32(0)  >>FIXED) << 16) & 0xff0000) |    \
+        (((vfx22_10_Green.getu32(0)>>FIXED) <<  8) &   0xff00) |    \
+         ((vfx22_10_Blue.getu32(0) >>FIXED) <<  0);                 \
+    dest[nDestIndex+1] =                                            \
+        0xff000000 |                                                \
+        (((vfx22_10_Red.getu32(1)  >>FIXED) << 16) & 0xff0000) |    \
+        (((vfx22_10_Green.getu32(1)>>FIXED) <<  8) &   0xff00) |    \
+         ((vfx22_10_Blue.getu32(1) >>FIXED) <<  0);                 \
+    dest[nDestIndex+2] =                                            \
+        0xff000000 |                                                \
+        (((vfx22_10_Red.getu32(2)  >>FIXED) << 16) & 0xff0000) |    \
+        (((vfx22_10_Green.getu32(2)>>FIXED) <<  8) &   0xff00) |    \
+         ((vfx22_10_Blue.getu32(2) >>FIXED) <<  0);                 \
+    dest[nDestIndex+3] =                                            \
+        0xff000000 |                                                \
+        (((vfx22_10_Red.getu32(3)  >>FIXED) << 16) & 0xff0000) |    \
+        (((vfx22_10_Green.getu32(3)>>FIXED) <<  8) &   0xff00) |    \
+         ((vfx22_10_Blue.getu32(3) >>FIXED) <<  0);
+#else
+inline void vec4u32_store_RGB(
+    uint32_t * dest,
+    uint32_t nDestIndex,
+    const vec4u32 & vfx22_10_Red,
+    const vec4u32 & vfx22_10_Green,
+    const vec4u32 & vfx22_10_Blue
+) {
+    dest[nDestIndex  ] =
+        0xff000000 |
+        (((vfx22_10_Red.getu32(0)  >>FIXED) << 16) & 0xff0000) |
+        (((vfx22_10_Green.getu32(0)>>FIXED) <<  8) &   0xff00) |
+         ((vfx22_10_Blue.getu32(0) >>FIXED) <<  0);
+    dest[nDestIndex+1] =
+        0xff000000 |
+        (((vfx22_10_Red.getu32(1)  >>FIXED) << 16) & 0xff0000) |
+        (((vfx22_10_Green.getu32(1)>>FIXED) <<  8) &   0xff00) |
+         ((vfx22_10_Blue.getu32(1) >>FIXED) <<  0);
+    dest[nDestIndex+2] =
+        0xff000000 |
+        (((vfx22_10_Red.getu32(2)  >>FIXED) << 16) & 0xff0000) |
+        (((vfx22_10_Green.getu32(2)>>FIXED) <<  8) &   0xff00) |
+         ((vfx22_10_Blue.getu32(2) >>FIXED) <<  0);
+    dest[nDestIndex+3] =
+        0xff000000 |
+        (((vfx22_10_Red.getu32(3)  >>FIXED) << 16) & 0xff0000) |
+        (((vfx22_10_Green.getu32(3)>>FIXED) <<  8) &   0xff00) |
+         ((vfx22_10_Blue.getu32(3) >>FIXED) <<  0);
+}
+#endif
+
+void BilinearScale8(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uint32_t * dest, uint32_t nDestWidth, uint32_t nDestHeight) {
+    vec4u32  vs0, vs1, vs2, vs3;
+    uint32_t nSrcY;
+
+    vec4u32  vnSrcX, vnSrcIndex;
+    vec4u32  vfx22_10_RatioDestXtoSrcX = ((nSrcWidth - 1)<<FIXED) / nDestWidth;
+    fixed    nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixedbig fx22_10_DiffY;
+    vec4u32  vfx22_10_DiffX;
+    vec4u32  vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
+
+    uint32_t nDestIndex = 0;
+    for (uint32_t nDestY = 0; nDestY < nDestHeight; nDestY++) {
+        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+
+        for (uint32_t nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
+            vec4u32 vnDestX = vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
+            vnSrcX  =  (vfx22_10_RatioDestXtoSrcX * (vnDestX<<FIXED)) >> (FIXED*2);
+            vfx22_10_DiffX = ((vfx22_10_RatioDestXtoSrcX * (vnDestX<<FIXED))>>FIXED) - (vnSrcX << FIXED);
+
+            vnSrcIndex = (nSrcY * nSrcWidth + vnSrcX);
+
+            vs0 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 0);
+            vs1 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 1);
+            vs2 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth);
+            vs3 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth + 1);
+
+            vec4u32 vfx22_10_Factor3 = ((             vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor2 = (((1<<FIXED) - vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor1 = ((             vfx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor0 = (((1<<FIXED) - vfx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+
+            vfx22_10_Blue = ( \
+                (((vs0    ) & 0xff)<<FIXED) * vfx22_10_Factor0 +
+                (((vs1    ) & 0xff)<<FIXED) * vfx22_10_Factor1 +
+                (((vs2    ) & 0xff)<<FIXED) * vfx22_10_Factor2 +
+                (((vs3    ) & 0xff)<<FIXED) * vfx22_10_Factor3
+            ) >> FIXED;
+
+            vfx22_10_Green = ( \
+                (((vs0>> 8) & 0xff)<<FIXED) * vfx22_10_Factor0 +
+                (((vs1>> 8) & 0xff)<<FIXED) * vfx22_10_Factor1 +
+                (((vs2>> 8) & 0xff)<<FIXED) * vfx22_10_Factor2 +
+                (((vs3>> 8) & 0xff)<<FIXED) * vfx22_10_Factor3
+            ) >> FIXED;
+
+            vfx22_10_Red = ( \
+                (((vs0>>16) & 0xff)<<FIXED) * vfx22_10_Factor0 +
+                (((vs1>>16) & 0xff)<<FIXED) * vfx22_10_Factor1 +
+                (((vs2>>16) & 0xff)<<FIXED) * vfx22_10_Factor2 +
+                (((vs3>>16) & 0xff)<<FIXED) * vfx22_10_Factor3
+            ) >> FIXED;
+
+            vec4u32_store_RGB(dest, nDestIndex, vfx22_10_Red, vfx22_10_Green, vfx22_10_Blue);
+            nDestIndex += 4;
+        }
+    }
+}
+
+struct Render_Bilinear8 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale8((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear8, "Bi8", "Bi7 renderer, with intrinsics refactored into a class, vec4u32");
+
+
+void BilinearScale9(uint32_t * src, int srcWidth, int srcHeight, uint32_t * dest, int destWidth, int destHeight) {
+    uint32_t s0, s1, s2, s3;
+    int srcX, srcY, srcIndex;
+
+    fixed ratioDestXtoSrcX = (((srcWidth - 1)<<FIXED) / destWidth);
+    fixed ratioDestYToSrcY = (((srcHeight - 1)<<FIXED) / destHeight);
+    fixedbig fx22_10_DiffX, fx22_10_DiffY;
+    fixedbig blue, green, red;
+    
+    int destIndex = 0;
+    for (int destY = 0; destY < destHeight; destY++) {
+        srcY = ((fixedbig)ratioDestYToSrcY * (fixedbig)(destY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)ratioDestYToSrcY * (fixedbig)(destY<<FIXED))>>FIXED) - (srcY << FIXED);
+
+        for (int destX = 0; destX < destWidth; destX++) {
+            srcX  =  ((fixedbig)ratioDestXtoSrcX * (fixedbig)(destX<<FIXED))>>(FIXED*2);
+            fx22_10_DiffX = (((fixedbig)ratioDestXtoSrcX * (fixedbig)(destX<<FIXED))>>FIXED) - (srcX << FIXED);
+
+            srcIndex = (srcY * srcWidth + srcX);
+            s0 = src[srcIndex];
+            s1 = src[srcIndex + 1];
+            s2 = src[srcIndex + srcWidth];
+            s3 = src[srcIndex + srcWidth + 1];
+
+            fixedbig fx22_10_Factor3 = ((             fx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            fixedbig fx22_10_Factor2 = (((1<<FIXED) - fx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            fixedbig fx22_10_Factor1 = ((             fx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+            fixedbig fx22_10_Factor0 = (((1<<FIXED) - fx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+
+            blue = ( \
+                (((s0    ) & 0xff)) * fx22_10_Factor0 +
+                (((s1    ) & 0xff)) * fx22_10_Factor1 +
+                (((s2    ) & 0xff)) * fx22_10_Factor2 +
+                (((s3    ) & 0xff)) * fx22_10_Factor3
+            );
+            
+            green = ( \
+                (((s0>> 8) & 0xff)) * fx22_10_Factor0 +
+                (((s1>> 8) & 0xff)) * fx22_10_Factor1 +
+                (((s2>> 8) & 0xff)) * fx22_10_Factor2 +
+                (((s3>> 8) & 0xff)) * fx22_10_Factor3
+            );
+            
+            red = ( \
+                (((s0>>16) & 0xff)) * fx22_10_Factor0 +
+                (((s1>>16) & 0xff)) * fx22_10_Factor1 +
+                (((s2>>16) & 0xff)) * fx22_10_Factor2 +
+                (((s3>>16) & 0xff)) * fx22_10_Factor3
+            );
+            
+            dest[destIndex++] =
+                0xff000000 |
+                (((red  >>FIXED) << 16) & 0xff0000) |
+                (((green>>FIXED) <<  8) &   0xff00) |
+                 ((blue >>FIXED) <<  0);
+        }
+    }
+}
+
+struct Render_Bilinear9 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale9((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear9, "Bi9", "Bi8 renderer, with less shifts");
+
+
+void BilinearScale10(uint32_t * src, int nSrcWidth, int nSrcHeight, uint32_t * dest, int nDestWidth, int nDestHeight) {
+    vec4u32  vs0, vs1, vs2, vs3;
+    uint32_t nSrcY;
+
+    vec4u32  vnSrcX, vnSrcIndex;
+    vec4u32  vfx22_10_RatioDestXtoSrcX = ((nSrcWidth - 1)<<FIXED) / nDestWidth;
+    fixed    nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixedbig fx22_10_DiffY;
+    vec4u32  vfx22_10_DiffX;
+    vec4u32  vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
+
+    uint32_t nDestIndex = 0;
+    for (uint32_t nDestY = 0; nDestY < nDestHeight; nDestY++) {
+        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+
+        for (uint32_t nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
+            vec4u32 vnDestX = vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
+            vnSrcX  =  (vfx22_10_RatioDestXtoSrcX * (vnDestX<<FIXED)) >> (FIXED*2);
+            vfx22_10_DiffX = ((vfx22_10_RatioDestXtoSrcX * (vnDestX<<FIXED))>>FIXED) - (vnSrcX << FIXED);
+
+            vnSrcIndex = (nSrcY * nSrcWidth + vnSrcX);
+
+            vs0 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 0);
+            vs1 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 1);
+            vs2 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth);
+            vs3 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth + 1);
+
+            vec4u32 vfx22_10_Factor3 = ((             vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor2 = (((1<<FIXED) - vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor1 = ((             vfx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor0 = (((1<<FIXED) - vfx22_10_DiffX) * ((1<<FIXED) - fx22_10_DiffY)) >> FIXED;
+
+            vfx22_10_Blue = ( \
+                (((vs0    ) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1    ) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2    ) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3    ) & 0xff)) * vfx22_10_Factor3
+            );
+
+            vfx22_10_Green = ( \
+                (((vs0>> 8) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1>> 8) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2>> 8) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3>> 8) & 0xff)) * vfx22_10_Factor3
+            );
+
+            vfx22_10_Red = ( \
+                (((vs0>>16) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1>>16) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2>>16) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3>>16) & 0xff)) * vfx22_10_Factor3
+            );
+            
+            vec4u32_store_RGB(dest, nDestIndex, vfx22_10_Red, vfx22_10_Green, vfx22_10_Blue);
+            nDestIndex += 4;
+        }
+    }
+}
+
+struct Render_Bilinear10 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale10((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear10, "Bi10", "Bi9 renderer, 4 pixels at a time via SSE4.1 intrinsics");
+
+
+
 
 int main(int argc, char ** argv) {
     std::string srcFile;

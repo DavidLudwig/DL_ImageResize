@@ -1,13 +1,14 @@
 run: build
-	#./test -c
-	# ./test -r bi2 -r bi3 --cmp test_330.bmp
-	# ./test -r bi3 test_full.bmp
-	#./test -r bi -h -n 10
-	# ./test -r bi2 -h -n 500 -t 2500 && ./test -r bi1 -h -n 500 -t 2500 && ./test -r scalesdl -h -n 500 -t 2500
-	# ./test -r bi2 -h -n 500 -t 2500 test_full.bmp && ./test -r bi1 -h -n 500 -t 2500 test_full.bmp && ./test -r scalesdl -h -n 500 -t 2500 test_full.bmp
-	# ./test -r bi2 -r bi5 --cmp -f test_330.bmp -s 448x448
-	# ./test -r bi2 -r bi2b --cmp -f test_330.bmp -s 448x448
-	./test -r bi2 -r bi6 --cmp -s 448x448
+# 	#./test -c
+# 	# ./test -r bi2 -r bi3 --cmp test_330.bmp
+# 	# ./test -r bi3 test_full.bmp
+# 	#./test -r bi -h -n 10
+# 	# ./test -r bi2 -h -n 500 -t 2500 && ./test -r bi1 -h -n 500 -t 2500 && ./test -r scalesdl -h -n 500 -t 2500
+# 	# ./test -r bi2 -h -n 500 -t 2500 test_full.bmp && ./test -r bi1 -h -n 500 -t 2500 test_full.bmp && ./test -r scalesdl -h -n 500 -t 2500 test_full.bmp
+# 	# ./test -r bi2 -r bi5 --cmp -f test_330.bmp -s 448x448
+# 	# ./test -r bi2 -r bi2b --cmp -f test_330.bmp -s 448x448
+	# ./test -r bi2 -r bi6 --cmp -s 448x448
+	./test -r bi8 -r bi10 --cmp -s 448x448
 
 build: DLTest.cpp DLTest.h main.cpp Makefile x86
 	#emcc test.cpp -O2 -o test.html -I .. -std=c++11 $(shell ./dltest-config emscripten)
