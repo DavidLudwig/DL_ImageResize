@@ -333,7 +333,7 @@ void BilinearScale7(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uin
     // fixed fx22_10_RatioDestXtoSrcX = (((nSrcWidth - 1)<<FIXED) / nDestWidth);
     __m128i vfx22_10_RatioDestXtoSrcX = _mm_set1_epi32(((nSrcWidth - 1)<<FIXED) / nDestWidth);
 
-    fixed nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixed vfx22_10_RatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
     //fixedbig diffX, diffY;
     // fixedbig fx22_10_DiffX, fx22_10_DiffY;
     fixedbig fx22_10_DiffY;
@@ -344,8 +344,8 @@ void BilinearScale7(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uin
 
     int nDestIndex = 0;
     for (int nDestY = 0; nDestY < nDestHeight; nDestY++) {
-        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
-        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+        nSrcY = ((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
 
         for (int nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
             __m128i vnDestX = _mm_setr_epi32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
@@ -767,15 +767,15 @@ void BilinearScale8(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uin
 
     vec4u32  vnSrcX, vnSrcIndex;
     vec4u32  vfx22_10_RatioDestXtoSrcX = ((nSrcWidth - 1)<<FIXED) / nDestWidth;
-    fixed    nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixed    vfx22_10_RatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
     fixedbig fx22_10_DiffY;
     vec4u32  vfx22_10_DiffX;
     vec4u32  vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
 
     uint32_t nDestIndex = 0;
     for (uint32_t nDestY = 0; nDestY < nDestHeight; nDestY++) {
-        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
-        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+        nSrcY = ((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
 
         for (uint32_t nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
             vec4u32 vnDestX = vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
@@ -902,15 +902,15 @@ void BilinearScale10(uint32_t * src, int nSrcWidth, int nSrcHeight, uint32_t * d
 
     vec4u32  vnSrcX, vnSrcIndex;
     vec4u32  vfx22_10_RatioDestXtoSrcX = ((nSrcWidth - 1)<<FIXED) / nDestWidth;
-    fixed    nRatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixed    vfx22_10_RatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
     fixedbig fx22_10_DiffY;
     vec4u32  vfx22_10_DiffX;
     vec4u32  vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
 
     uint32_t nDestIndex = 0;
     for (uint32_t nDestY = 0; nDestY < nDestHeight; nDestY++) {
-        nSrcY = ((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
-        fx22_10_DiffY = (((fixedbig)nRatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+        nSrcY = ((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)vfx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
 
         for (uint32_t nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
             vec4u32 vnDestX = vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
