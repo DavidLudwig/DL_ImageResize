@@ -7,8 +7,9 @@ run: build
 # 	# ./test -r bi2 -h -n 500 -t 2500 test_full.bmp && ./test -r bi1 -h -n 500 -t 2500 test_full.bmp && ./test -r scalesdl -h -n 500 -t 2500 test_full.bmp
 # 	# ./test -r bi2 -r bi5 --cmp -f test_330.bmp -s 448x448
 # 	# ./test -r bi2 -r bi2b --cmp -f test_330.bmp -s 448x448
-	# ./test -r bi2 -r bi6 --cmp -s 448x448
-	./test -r bi8 -r bi10 --cmp -s 448x448
+	# ./test -r bi2 -r bi10 --cmp -s 448x448
+	# ./test -r bi2 -f test_full.bmp -s 1024x768 -r src
+	./test -r bi10 -r bi11 --cmp -s 448x448
 
 build: DLTest.cpp DLTest.h main.cpp Makefile x86
 	#emcc test.cpp -O2 -o test.html -I .. -std=c++11 $(shell ./dltest-config emscripten)
