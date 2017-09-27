@@ -689,9 +689,13 @@ struct vec4u32 {
     inline vec4u32  operator -  (const vec4u32 & b) const { return _mm_sub_epi32(data, b.data);   }
     inline vec4u32  operator *  (const vec4u32 & b) const { return _mm_mullo_epi32(data, b.data); }
     inline vec4u32  operator &  (uint32_t scalar)   const { return _mm_and_si128(data, _mm_set1_epi32(scalar)); }
+    inline vec4u32  operator |  (const vec4u32 & b) const { return _mm_or_si128(data, b.data);    }
     inline vec4u32  operator << (int imm8)          const { return _mm_slli_epi32(data, imm8);    }
     inline vec4u32  operator >> (int imm8)          const { return _mm_srli_epi32(data, imm8);    }
     inline uint32_t getu32      (int imm8)          const { return _mm_extract_epi32(data, imm8); }
+
+    inline void store_si128_aligned  (uint32_t * dest)      const { _mm_store_si128(((__m128i *)(dest)), data); }
+    inline void store_si128_unaligned(uint32_t * dest)      const { _mm_storeu_si128(((__m128i *)(dest)), data); }
 };
 
 inline vec4u32 operator + (uint32_t scalar, const vec4u32 & b) { return vec4u32(scalar) + b; }
@@ -699,24 +703,56 @@ inline vec4u32 operator - (uint32_t scalar, const vec4u32 & b) { return vec4u32(
 
 #if 1
 // using a macro is slightly faster, in at least some cases
-#define vec4u32_loadFromOffsets4x32(src, offsets, extraOffset) { \
-    src[_mm_extract_epi32(offsets.data, 0) + extraOffset],       \
-    src[_mm_extract_epi32(offsets.data, 1) + extraOffset],       \
-    src[_mm_extract_epi32(offsets.data, 2) + extraOffset],       \
-    src[_mm_extract_epi32(offsets.data, 3) + extraOffset]        \
+
+#if 1
+// Slower, SSE2-compatible version:
+#define vec4u32_loadFromOffsets4x32(dest, src, offsets, extraOffset) { \
+    uint32_t __attribute__((aligned(16))) rawOffsets[4]; \
+    _mm_store_si128((__m128i *)rawOffsets, offsets.data); \
+    dest = { \
+        src[rawOffsets[0] + extraOffset], \
+        src[rawOffsets[1] + extraOffset], \
+        src[rawOffsets[2] + extraOffset], \
+        src[rawOffsets[3] + extraOffset], \
+    }; \
 }
 #else
-inline vec4u32 vec4u32_loadFromOffsets4x32(const uint32_t * src, const vec4u32 & offsets, const uint32_t & extraOffset) {
-    return {
+// Faster, SSE4.1 version:
+#define vec4u32_loadFromOffsets4x32(dest, src, offsets, extraOffset) \
+dest = {                                                        \
+    src[_mm_extract_epi32(offsets.data, 0) + extraOffset],      \
+    src[_mm_extract_epi32(offsets.data, 1) + extraOffset],      \
+    src[_mm_extract_epi32(offsets.data, 2) + extraOffset],      \
+    src[_mm_extract_epi32(offsets.data, 3) + extraOffset]       \
+}
+#endif
+
+
+#else
+inline void vec4u32_loadFromOffsets4x32(vec4u32 & dest, const uint32_t * src, const vec4u32 & offsets, const uint32_t & extraOffset) {
+    #if 0
+    // Slower, SSE2-compatible version:
+    uint32_t __attribute__((aligned(16))) rawOffsets[4];
+    _mm_storeu_si128((__m128i *)rawOffsets, offsets.data);
+    dest = {
+        src[rawOffsets[0] + extraOffset],
+        src[rawOffsets[1] + extraOffset],
+        src[rawOffsets[2] + extraOffset],
+        src[rawOffsets[3] + extraOffset],
+    };
+    #else
+    // Faster, SSE4.1 version:
+    dest = {
         src[_mm_extract_epi32(offsets.data, 0) + extraOffset],
         src[_mm_extract_epi32(offsets.data, 1) + extraOffset],
         src[_mm_extract_epi32(offsets.data, 2) + extraOffset],
         src[_mm_extract_epi32(offsets.data, 3) + extraOffset]
     };
+    #endif
 }
 #endif
 
-#if 1
+#if 0
 #define vec4u32_store_RGB(dest, nDestIndex, vfx22_10_Red, vfx22_10_Green, vfx22_10_Blue) \
     dest[nDestIndex  ] =                                            \
         0xff000000 |                                                \
@@ -738,7 +774,7 @@ inline vec4u32 vec4u32_loadFromOffsets4x32(const uint32_t * src, const vec4u32 &
         (((vfx22_10_Red.getu32(3)  >>FIXED) << 16) & 0xff0000) |    \
         (((vfx22_10_Green.getu32(3)>>FIXED) <<  8) &   0xff00) |    \
          ((vfx22_10_Blue.getu32(3) >>FIXED) <<  0);
-#else
+#elif 0
 inline void vec4u32_store_RGB(
     uint32_t * dest,
     uint32_t nDestIndex,
@@ -767,6 +803,61 @@ inline void vec4u32_store_RGB(
         (((vfx22_10_Green.getu32(3)>>FIXED) <<  8) &   0xff00) |
          ((vfx22_10_Blue.getu32(3) >>FIXED) <<  0);
 }
+#else
+inline void vec4u32_store_RGB(
+    uint32_t * dest,
+    uint32_t nDestIndex,
+    const vec4u32 & vfx22_10_Red,
+    const vec4u32 & vfx22_10_Green,
+    const vec4u32 & vfx22_10_Blue
+) {
+
+#if FIXED == 10
+    vec4u32 final = \
+        vec4u32(0xff000000) |
+        ((vfx22_10_Red   <<  6) & 0x00ff0000) |
+        ((vfx22_10_Green >>  2) & 0x0000ff00) |
+        ((vfx22_10_Blue  >> 10) & 0x000000ff);
+#else
+    vec4u32 final = \
+        vec4u32(0xff000000) |
+        (((vfx22_10_Red   >> FIXED) << 16) & 0x00ff0000) |
+        (((vfx22_10_Green >> FIXED) <<  8) & 0x0000ff00) |
+        (((vfx22_10_Blue  >> FIXED)      ) & 0x000000ff);
+#endif
+
+    // vec4u32 final = \
+    //     vec4u32(0xff000000) |
+    //     (vfx22_10_Red   << 14 >> 24 << 16) |
+    //     (vfx22_10_Green << 14 >> 24 << 8) |
+    //     (vfx22_10_Blue  << 14 >> 24);
+
+    final.store_si128_unaligned(dest + nDestIndex);
+    // final.store_si128_aligned(dest + nDestIndex);
+
+
+
+    // dest[nDestIndex  ] =
+    //     0xff000000 |
+    //     (((vfx22_10_Red.getu32(0)  >>FIXED) << 16) & 0xff0000) |
+    //     (((vfx22_10_Green.getu32(0)>>FIXED) <<  8) &   0xff00) |
+    //      ((vfx22_10_Blue.getu32(0) >>FIXED) <<  0);
+    // dest[nDestIndex+1] =
+    //     0xff000000 |
+    //     (((vfx22_10_Red.getu32(1)  >>FIXED) << 16) & 0xff0000) |
+    //     (((vfx22_10_Green.getu32(1)>>FIXED) <<  8) &   0xff00) |
+    //      ((vfx22_10_Blue.getu32(1) >>FIXED) <<  0);
+    // dest[nDestIndex+2] =
+    //     0xff000000 |
+    //     (((vfx22_10_Red.getu32(2)  >>FIXED) << 16) & 0xff0000) |
+    //     (((vfx22_10_Green.getu32(2)>>FIXED) <<  8) &   0xff00) |
+    //      ((vfx22_10_Blue.getu32(2) >>FIXED) <<  0);
+    // dest[nDestIndex+3] =
+    //     0xff000000 |
+    //     (((vfx22_10_Red.getu32(3)  >>FIXED) << 16) & 0xff0000) |
+    //     (((vfx22_10_Green.getu32(3)>>FIXED) <<  8) &   0xff00) |
+    //      ((vfx22_10_Blue.getu32(3) >>FIXED) <<  0);
+}
 #endif
 
 void BilinearScale8(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uint32_t * dest, uint32_t nDestWidth, uint32_t nDestHeight) {
@@ -792,10 +883,10 @@ void BilinearScale8(uint32_t * src, uint32_t nSrcWidth, uint32_t nSrcHeight, uin
 
             vnSrcIndex = (nSrcY * nSrcWidth + vnSrcX);
 
-            vs0 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 0);
-            vs1 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 1);
-            vs2 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth);
-            vs3 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth + 1);
+            vec4u32_loadFromOffsets4x32(vs0, src, vnSrcIndex, 0);
+            vec4u32_loadFromOffsets4x32(vs1, src, vnSrcIndex, 1);
+            vec4u32_loadFromOffsets4x32(vs2, src, vnSrcIndex, nSrcWidth);
+            vec4u32_loadFromOffsets4x32(vs3, src, vnSrcIndex, nSrcWidth + 1);
 
             vec4u32 vfx22_10_Factor3 = ((             vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
             vec4u32 vfx22_10_Factor2 = (((1<<FIXED) - vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
@@ -927,10 +1018,10 @@ void BilinearScale10(uint32_t * src, int nSrcWidth, int nSrcHeight, uint32_t * d
 
             vnSrcIndex = (nSrcY * nSrcWidth + vnSrcX);
 
-            vs0 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 0);
-            vs1 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, 1);
-            vs2 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth);
-            vs3 = vec4u32_loadFromOffsets4x32(src, vnSrcIndex, nSrcWidth + 1);
+            vec4u32_loadFromOffsets4x32(vs0, src, vnSrcIndex, 0);
+            vec4u32_loadFromOffsets4x32(vs1, src, vnSrcIndex, 1);
+            vec4u32_loadFromOffsets4x32(vs2, src, vnSrcIndex, nSrcWidth);
+            vec4u32_loadFromOffsets4x32(vs3, src, vnSrcIndex, nSrcWidth + 1);
 
             vec4u32 vfx22_10_Factor3 = ((             vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
             vec4u32 vfx22_10_Factor2 = (((1<<FIXED) - vfx22_10_DiffX) * (             fx22_10_DiffY)) >> FIXED;
@@ -970,6 +1061,81 @@ struct Render_Bilinear10 : public Render_ScalerBase {
     }
 };
 DLT_RegisterRenderer(Render_Bilinear10, "Bi10", "Bi9 renderer, 4 pixels at a time via SSE4.1 intrinsics");
+
+
+
+void BilinearScale11(uint32_t * src, int nSrcWidth, int nSrcHeight, uint32_t * dest, int nDestWidth, int nDestHeight) {
+    vec4u32  vs0, vs1, vs2, vs3;
+    uint32_t nSrcY;
+
+    vec4u32  vnSrcX, vnSrcIndex;
+    vec4u32  vfx22_10_RatioDestXtoSrcX = ((nSrcWidth - 1)<<FIXED) / nDestWidth;
+    fixed    fx22_10_RatioDestYToSrcY = (((nSrcHeight - 1)<<FIXED) / nDestHeight);
+    fixedbig fx22_10_DiffY;
+    vec4u32  vfx22_10_DiffX;
+    vec4u32  vfx22_10_Blue, vfx22_10_Green, vfx22_10_Red;
+
+    uint32_t nDestIndex = 0;
+    for (uint32_t nDestY = 0; nDestY < nDestHeight; nDestY++) {
+#if 1
+        nSrcY = ((fixedbig)fx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>(FIXED*2);
+        fx22_10_DiffY = (((fixedbig)fx22_10_RatioDestYToSrcY * (fixedbig)(nDestY<<FIXED))>>FIXED) - (nSrcY << FIXED);
+#else
+        nSrcY = ((fixedbig)fx22_10_RatioDestYToSrcY * nDestY)>>FIXED;
+        fx22_10_DiffY = ((fixedbig)fx22_10_RatioDestYToSrcY * (fixedbig)nDestY) - (nSrcY << FIXED);
+#endif
+
+        for (uint32_t nDestX = 0; nDestX < nDestWidth; nDestX += 4) {
+            vec4u32 vnDestX = vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
+            vnSrcX  =  (vfx22_10_RatioDestXtoSrcX * vnDestX) >> FIXED;
+            vfx22_10_DiffX = (vfx22_10_RatioDestXtoSrcX * vnDestX) - (vnSrcX << FIXED);
+
+            vnSrcIndex = (nSrcY * nSrcWidth + vnSrcX);
+
+            vec4u32_loadFromOffsets4x32(vs0, src, vnSrcIndex, 0);
+            vec4u32_loadFromOffsets4x32(vs1, src, vnSrcIndex, 1);
+            vec4u32_loadFromOffsets4x32(vs2, src, vnSrcIndex, nSrcWidth);
+            vec4u32_loadFromOffsets4x32(vs3, src, vnSrcIndex, nSrcWidth + 1);
+
+            const vec4u32 vfx22_10_one = (1<<FIXED);
+            vec4u32 vfx22_10_Factor3 = ((               vfx22_10_DiffX) * (               fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor2 = ((vfx22_10_one - vfx22_10_DiffX) * (               fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor1 = ((               vfx22_10_DiffX) * (vfx22_10_one - fx22_10_DiffY)) >> FIXED;
+            vec4u32 vfx22_10_Factor0 = ((vfx22_10_one - vfx22_10_DiffX) * (vfx22_10_one - fx22_10_DiffY)) >> FIXED;
+
+            vfx22_10_Blue = ( \
+                (((vs0    ) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1    ) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2    ) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3    ) & 0xff)) * vfx22_10_Factor3
+            );
+
+            vfx22_10_Green = ( \
+                (((vs0>> 8) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1>> 8) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2>> 8) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3>> 8) & 0xff)) * vfx22_10_Factor3
+            );
+
+            vfx22_10_Red = ( \
+                (((vs0>>16) & 0xff)) * vfx22_10_Factor0 +
+                (((vs1>>16) & 0xff)) * vfx22_10_Factor1 +
+                (((vs2>>16) & 0xff)) * vfx22_10_Factor2 +
+                (((vs3>>16) & 0xff)) * vfx22_10_Factor3
+            );
+            
+            vec4u32_store_RGB(dest, nDestIndex, vfx22_10_Red, vfx22_10_Green, vfx22_10_Blue);
+            nDestIndex += 4;
+        }
+    }
+}
+
+struct Render_Bilinear11 : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        BilinearScale11((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
+    }
+};
+DLT_RegisterRenderer(Render_Bilinear11, "Bi11", "Bi10 renderer, with stuff");
 
 
 
