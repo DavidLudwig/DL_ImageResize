@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7505DBC11F7176E9003FBD03 /* x86_3.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 7505DBC01F7176E9003FBD03 /* x86_3.nasm */; };
+		7546BAE61F7C73F200851156 /* DL_ImageResize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7546BAE41F7C73F200851156 /* DL_ImageResize.cpp */; };
 		75A3F9751F76B0F100D3554E /* x86_4.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 75A3F9741F76B0F100D3554E /* x86_4.nasm */; };
 		75A3F9961F772F6200D3554E /* x86_5.nasm in Sources */ = {isa = PBXBuildFile; fileRef = 75A3F9911F772F6200D3554E /* x86_5.nasm */; };
 		75A3F9A01F7730B300D3554E /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 75A3F99F1F7730B300D3554E /* SDL2.framework */; };
@@ -31,6 +32,8 @@
 /* Begin PBXFileReference section */
 		16DE0C409870B9C9D96D03BCEAF6E4BB7EF54593BD3B4809 /* test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = test; sourceTree = BUILT_PRODUCTS_DIR; };
 		7505DBC01F7176E9003FBD03 /* x86_3.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_3.nasm; sourceTree = "<group>"; };
+		7546BAE41F7C73F200851156 /* DL_ImageResize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DL_ImageResize.cpp; path = ../DL_ImageResize.cpp; sourceTree = "<group>"; };
+		7546BAE51F7C73F200851156 /* DL_ImageResize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DL_ImageResize.h; path = ../DL_ImageResize.h; sourceTree = "<group>"; };
 		75A3F9741F76B0F100D3554E /* x86_4.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_4.nasm; sourceTree = "<group>"; };
 		75A3F9911F772F6200D3554E /* x86_5.nasm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.nasm; path = x86_5.nasm; sourceTree = "<group>"; };
 		75A3F99F1F7730B300D3554E /* SDL2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL2.framework; path = external/SDL2.framework; sourceTree = "<group>"; };
@@ -54,6 +57,8 @@
 		4AEDC5EED41CF840B54815FB4563A672908F794CD355EE80 /* test */ = {
 			isa = PBXGroup;
 			children = (
+				7546BAE41F7C73F200851156 /* DL_ImageResize.cpp */,
+				7546BAE51F7C73F200851156 /* DL_ImageResize.h */,
 				7505DBC01F7176E9003FBD03 /* x86_3.nasm */,
 				75A3F9741F76B0F100D3554E /* x86_4.nasm */,
 				75A3F9911F772F6200D3554E /* x86_5.nasm */,
@@ -155,6 +160,7 @@
 				75A3F9961F772F6200D3554E /* x86_5.nasm in Sources */,
 				75C101BF1F6DFE9A0003FBF6 /* DLTest.cpp in Sources */,
 				7505DBC11F7176E9003FBD03 /* x86_3.nasm in Sources */,
+				7546BAE61F7C73F200851156 /* DL_ImageResize.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

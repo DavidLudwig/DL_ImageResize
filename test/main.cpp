@@ -18,7 +18,7 @@ struct Render_Src : public DLT_Renderer {
         SDL_UpperBlit(src, NULL, env.dest, &destRect);
     }
 };
-DLT_RegisterRenderer(Render_Src, "SRC", "source image, no scaling");
+DLT_RegisterRenderer(Render_Src, "src", "source image, no scaling");
 
 struct Render_Src2X : public DLT_Renderer {
     virtual void Init(DLT_Env & env) {
@@ -61,8 +61,8 @@ struct Render_ScalerBase : public DLT_Renderer {
         
         // Create a pixel buffer aligned on a 16-byte boundary, in case we want
         // to use SSE2 aligned I/O.
-        buffer = calloc(1, (ScaleWidth * ScaleHeight * 4) + 16);
-        void * alignedBuffer = (void *)(((uintptr_t)buffer+15) & ~ 0x0F);
+        void * alignedBuffer = calloc(1, (ScaleWidth * ScaleHeight * 4)); // + 16);
+        //void * alignedBuffer = (void *)(((uintptr_t)buffer+15) & ~ 0x0F);
         env.dest = SDL_CreateRGBSurfaceFrom(
             alignedBuffer, ScaleWidth, ScaleHeight, 32, (ScaleWidth * 4), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
     }
@@ -704,7 +704,7 @@ inline vec4u32 operator - (uint32_t scalar, const vec4u32 & b) { return vec4u32(
 #if 1
 // using a macro is slightly faster, in at least some cases
 
-#if 1
+#if 0
 // Slower, SSE2-compatible version:
 #define vec4u32_loadFromOffsets4x32(dest, src, offsets, extraOffset) { \
     uint32_t __attribute__((aligned(16))) rawOffsets[4]; \
@@ -1135,7 +1135,37 @@ struct Render_Bilinear11 : public Render_ScalerBase {
         BilinearScale11((uint32_t*)src->pixels, src->w, src->h, (uint32_t*)env.dest->pixels, env.dest->w, env.dest->h);
     }
 };
-DLT_RegisterRenderer(Render_Bilinear11, "Bi11", "Bi10 renderer, with stuff");
+DLT_RegisterRenderer(Render_Bilinear11, "Bi11", "Bi10 renderer, with optimizations");
+
+
+#include "DL_ImageResize.h"
+
+struct Render_BilinearDLIR : public Render_ScalerBase {
+    virtual void Draw(DLT_Env & env) {
+        SDL_FillRect(env.dest, NULL, 0xffff0000);
+        DLIR_ResizeBilinear_ARGB8888(
+            src->pixels,
+            0,
+            0,
+            src->w,
+            src->h,
+            src->pitch,
+
+            env.dest->pixels,
+            0,
+            0,
+            env.dest->w,
+            env.dest->h,
+            env.dest->pitch,
+
+            0, //165,
+            0, //165,
+            src->w, // - 165, // - 32,
+            src->h  // - 165 // - 2
+        );
+    }
+};
+DLT_RegisterRenderer(Render_BilinearDLIR, "dlir", "DLIR default renderer");
 
 
 
@@ -1187,9 +1217,12 @@ int main(int argc, char ** argv) {
 
         // Align src's pixel-bufferon a 16-byte boundary, in case we want to
         // use SSE2 aligned I/O.
-        void * buffer = calloc(1, (srcTemp->w * srcTemp->h * 4) + 15);
-        void * alignedBuffer = (void *)(((uintptr_t)buffer+15) & ~ 0x0F);
-        src = SDL_CreateRGBSurfaceFrom(alignedBuffer, srcTemp->w, srcTemp->h, 32, (srcTemp->w * 4), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+//        void * buffer = calloc(1, (srcTemp->w * srcTemp->h * 4) + 15);
+//        memset(buffer, 0x77, (srcTemp->w * srcTemp->h * 4) + 15);
+//        void * alignedBuffer = (void *)(((uintptr_t)buffer+15) & ~ 0x0F);
+//        src = SDL_CreateRGBSurfaceFrom(alignedBuffer, srcTemp->w, srcTemp->h, 32, (srcTemp->w * 4), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+        void * buffer = calloc(1, (srcTemp->w * srcTemp->h * 4));
+        src = SDL_CreateRGBSurfaceFrom(buffer, srcTemp->w, srcTemp->h, 32, (srcTemp->w * 4), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         if (!src) {
             SDL_Log("ERROR, Couldn't convert source image to wanted pixel-format: %s\n", SDL_GetError());
             return 1;
