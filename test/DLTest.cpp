@@ -232,11 +232,11 @@ static void DLT_UpdateWindowTitles()
         const char * lockedText = DLT_IS_LOCKED() ? ",lock" : "";
 
         if (dynamic_cast<DLT_Render_Compare *>(envs[i].renderer)) {
-            SDL_snprintf(window_title, SDL_arraysize(window_title), "DLRTest %s %s +/-:%d p:%d,%d%s a,rgb:%02x,%02x%02x%02x",
+            SDL_snprintf(window_title, SDL_arraysize(window_title), "%s %s +/-:%d p:%d,%d%s a,rgb:%02x,%02x%02x%02x",
                 typeName.c_str(), compare_name, compare_threshold, curX, curY, lockedText,
                 a, r, g, b);
         } else {
-            SDL_snprintf(window_title, SDL_arraysize(window_title), "DLRTest %s p:(%d,%d)%s a,rgb:0x%02x,0x%02x%02x%02x",
+            SDL_snprintf(window_title, SDL_arraysize(window_title), "%s p:(%d,%d)%s a,rgb:0x%02x,0x%02x%02x%02x",
                 typeName.c_str(), curX, curY, lockedText,
                 a, r, g, b);
         }
