@@ -7,27 +7,23 @@
 #include <stdint.h>
 #include <string.h>
 
-#if !defined(DLIR_USE_SSE2)
+#if !defined(DLIR_USE_INTRINSICS)
+    #define DLIR_USE_INSTRINSICS 1
+#endif
+
+#if !defined(DLIR_USE_SSE2) && DLIR_USE_INTRINSICS
     #if defined(__has_include)
         #if __has_include("xmmintrin.h")
             #define DLIR_USE_SSE2 1
-        #else
-            #undef DLIR_USE_SSE2
         #endif
-    #else
-        #undef DLIR_USE_SSE2
     #endif
 #endif
 
-#if !defined(DLIR_USE_SSE41)
+#if !defined(DLIR_USE_SSE41) && DLIR_USE_INTRINSICS
     #if defined(__has_include)
         #if __has_include("smmintrin.h")
             #define DLIR_USE_SSE41 1
-        #else
-            #undef DLIR_USE_SSE41
         #endif
-    #else
-        #undef DLIR_USE_SSE41
     #endif
 #endif
 
