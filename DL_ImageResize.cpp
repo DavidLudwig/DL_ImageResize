@@ -12,14 +12,15 @@ typedef uint32_t DLIR_FixedBig;
 
 #define DLIR_min(A, B) (((A) < (B)) ? (A) : (B))
 #define DLIR_max(A, B) (((A) > (B)) ? (A) : (B))
+#define DLIR_clamp(VALUE, LO, HI) DLIR_min((HI), DLIR_max((LO), (VALUE)))
 
 
-
-#if 0 // __SSE4_1__
+#if DLIR_USE_SSE2 && DLIR_USE_SSE41
 
 #include <emmintrin.h>
 #include <smmintrin.h>
 
+struct DLIR_Vec4u32 {
     __m128i data;
 
     inline DLIR_Vec4u32() = default;
@@ -92,15 +93,17 @@ inline void DLIR_Vec4u32_store_RGB(
     // final.store_si128_aligned(dest + destOffset);
 }
 
-void DLIR_ResizeBilinear_ARGB8888_Body_SSE41(
-    uint8_t * pSrc,
-    int nSrcWidth,
-    int nSrcHeight,
-    int nSrcPitch,
+void DLIR_ResizeBilinear_ARGB8888_SSE41(
+    const uint8_t * pSrc,
+    uint32_t nSrcWidth,
+    uint32_t nSrcHeight,
+    uint32_t nSrcPitch,
     uint8_t * pDest,
-    int nDestWidth,
-    int nDestHeight,
-    int nDestPitch,
+    uint32_t nDestWidth,
+    uint32_t nDestHeight,
+    uint32_t nDestPitch,
+    int nDestXMin,
+    int nDestYMin,
     int nDestXMax,
     int nDestYMax
 )
@@ -109,13 +112,13 @@ void DLIR_ResizeBilinear_ARGB8888_Body_SSE41(
     uint32_t nSrcY;
 
     DLIR_Vec4u32  vnSrcX, vnSrcIndex;
-    const DLIR_Vec4u32  vfxRatioDestXToSrcX = ((nSrcWidth - 1)<<DLIR_FIXED) / nDestWidth;
-    const DLIR_Fixed    fxRatioDestYToSrcY = (((nSrcHeight - 1)<<DLIR_FIXED) / nDestHeight);
+    const DLIR_Vec4u32  vfxRatioDestXToSrcX = ((nSrcWidth - 1)  << DLIR_FIXED) / nDestWidth;
+    const DLIR_Fixed    fxRatioDestYToSrcY = (((nSrcHeight - 1) << DLIR_FIXED) / nDestHeight);
     DLIR_FixedBig fxDiffY;
     DLIR_Vec4u32  vfxDiffX;
     DLIR_Vec4u32  vfxBlue, vfxGreen, vfxRed;
 
-    for (uint32_t nDestY = 0; nDestY < nDestYMax; nDestY++) {
+    for (uint32_t nDestY = nDestYMin; nDestY <= nDestYMax; nDestY++) {
 #if 1   // DavidL: This path measures slightly faster, on my test systems
         nSrcY = ((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>(DLIR_FIXED*2);
         fxDiffY = (((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcY << DLIR_FIXED);
@@ -124,7 +127,7 @@ void DLIR_ResizeBilinear_ARGB8888_Body_SSE41(
         fxDiffY = ((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)nDestY) - (nSrcY << DLIR_FIXED);
 #endif
 
-        for (uint32_t nDestX = 0; nDestX < nDestXMax; nDestX += 4) {
+        for (uint32_t nDestX = nDestXMin; nDestX <= nDestXMax; nDestX += 4) {
             DLIR_Vec4u32 vnDestX = DLIR_Vec4u32(nDestX, nDestX + 1, nDestX + 2, nDestX + 3);
             vnSrcX   = (vfxRatioDestXToSrcX * vnDestX) >> DLIR_FIXED;
             vfxDiffX = (vfxRatioDestXToSrcX * vnDestX) - (vnSrcX << DLIR_FIXED);
@@ -162,45 +165,17 @@ void DLIR_ResizeBilinear_ARGB8888_Body_SSE41(
                 (((vfxSrc3>>16) & 0xff)) * vfxFactor3
             );
             
-            DLIR_Vec4u32_store_RGB(pDest, (nDestX<<2), vfxRed, vfxGreen, vfxBlue);
+            DLIR_Vec4u32_store_RGB(pDest, (nDestY * nDestPitch) + (nDestX<<2), vfxRed, vfxGreen, vfxBlue);
         }
-        pDest += nDestPitch;
+//        pDest += nDestPitch;
     }
 }
 
-#endif // __SSE4_1__
-
-/*
-void DLIR_CalcSrcRectFromDest(
-    uint32_t destX,
-    uint32_t destY,
-    uint32_t destWidth,
-    uint32_t destHeight,
-    uint32_t * srcX,
-    uint32_t * srcY,
-    uint32_t * srcWidth,
-    uint32_t * srcHeight
-) {
-    const DLIR_Fixed fxRatioDestXToSrcX = (((srcWidth - 1)<<DLIR_FIXED) / destWidth);
-    const DLIR_Fixed fxRatioDestYToSrcY = (((srcHeight - 1)<<DLIR_FIXED) / destHeight);
-    if (srcX) {
-        *srcX = (fxRatioDestXToSrcX * srcX) >> DLIR_FIXED;
-    }
-    if (srcWidth) {
-        *srcWidth = (fxRatioDestXToSrcX * srcWidth) >> DLIR_FIXED;
-    }
-    if (srcY) {
-        *srcY = (fxRatioDestYToSrcY * srcY) >> DLIR_FIXED;
-    }
-    if (srcHeight) {
-        *srcHeight = (fxRatioDestYToSrcY * srcHeight) >> DLIR_FIXED;
-    }
-}
-*/
+#endif // DLIR_USE_SSE2 && DLIR_USE_SSE41
 
 
-static void DLIR_ResizeBilinear_ARGB8888_Body_Plain(
-    uint8_t * pSrc,
+static void DLIR_ResizeBilinear_ARGB8888_Plain(
+    const uint8_t * pSrc,
     uint32_t nSrcWidth,
     uint32_t nSrcHeight,
     uint32_t nSrcPitch,
@@ -216,8 +191,8 @@ static void DLIR_ResizeBilinear_ARGB8888_Body_Plain(
     uint32_t fxSrc0, fxSrc1, fxSrc2, fxSrc3;
     uint32_t nSrcX, nSrcY, nSrcIndex;
 
-    const DLIR_Fixed fxRatioDestXToSrcX = ((nSrcWidth<<DLIR_FIXED) / nDestWidth);
-    const DLIR_Fixed fxRatioDestYToSrcY = ((nSrcHeight<<DLIR_FIXED) / nDestHeight);
+    const DLIR_Fixed fxRatioDestXToSrcX = (((nSrcWidth - 1)  << DLIR_FIXED) / nDestWidth);
+    const DLIR_Fixed fxRatioDestYToSrcY = (((nSrcHeight - 1) << DLIR_FIXED) / nDestHeight);
     DLIR_FixedBig diffX, diffY;
     DLIR_FixedBig fxBlue, fxGreen, fxRed;
     
@@ -261,236 +236,14 @@ static void DLIR_ResizeBilinear_ARGB8888_Body_Plain(
                 (((fxSrc3>>16) & 0xff)<<DLIR_FIXED) * fxFactor3
             ) >> DLIR_FIXED;
             
-            *((uint32_t *)(pDest + (nDestX<<2))) =
+            *((uint32_t *)(pDest + (nDestY * nDestPitch) + (nDestX<<2))) =
                 0xff000000 |
                 (((fxRed  >>DLIR_FIXED) << 16) & 0xff0000) |
                 (((fxGreen>>DLIR_FIXED) <<  8) &   0xff00) |
                  ((fxBlue >>DLIR_FIXED) <<  0);
         }
-
-        pDest += nDestPitch;
-//        pSrc += nSrcPitch;
     }
 }
-
-
-static void DLIR_ResizeBilinear_ARGB8888_Bottom_Plain(
-    uint8_t * pSrc,
-    uint32_t nSrcWidth,
-    uint32_t nSrcHeight,
-    uint32_t nSrcPitch,
-    uint8_t * pDest,
-    uint32_t nDestWidth,
-    uint32_t nDestHeight,
-    uint32_t nDestPitch,
-    int nDestXMin,
-    int nDestYMin,
-    int nDestXMax,
-    int nDestYMax
-) {
-    uint32_t fxSrc0, fxSrc1, fxSrc2, fxSrc3;
-    uint32_t nSrcX, nSrcY, nSrcIndex;
-
-    const DLIR_Fixed fxRatioDestXToSrcX = ((nSrcWidth<<DLIR_FIXED) / nDestWidth);
-    const DLIR_Fixed fxRatioDestYToSrcY = ((nSrcHeight<<DLIR_FIXED) / nDestHeight);
-    DLIR_FixedBig diffX, diffY;
-    DLIR_FixedBig fxBlue, fxGreen, fxRed;
-    
-    for (int nDestY = nDestYMin; nDestY <= nDestYMax; nDestY++) {
-        nSrcY = ((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>(DLIR_FIXED*2);
-        diffY = (((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcY << DLIR_FIXED);
-
-        for (int nDestX = nDestXMin; nDestX <= nDestXMax; nDestX++) {
-            nSrcX =  ((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>(DLIR_FIXED*2);
-            diffX = (((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcX << DLIR_FIXED);
-
-            nSrcIndex = (nSrcY * nSrcPitch) + (nSrcX << 2);
-            fxSrc0 = fxSrc2 = *((uint32_t *)(pSrc + nSrcIndex));
-            fxSrc1 = fxSrc3 = *((uint32_t *)(pSrc + nSrcIndex + 4));
-
-            DLIR_FixedBig fxFactor3 = ((                  diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor2 = (((1<<DLIR_FIXED) - diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor1 = ((                  diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor0 = (((1<<DLIR_FIXED) - diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-
-            fxBlue = (
-                (((fxSrc0    ) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1    ) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2    ) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3    ) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxGreen = (
-                (((fxSrc0>> 8) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>> 8) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>> 8) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>> 8) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxRed = (
-                (((fxSrc0>>16) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>>16) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>>16) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>>16) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            *((uint32_t *)(pDest + (nDestX<<2))) =
-                0xff000000 |
-                (((fxRed  >>DLIR_FIXED) << 16) & 0xff0000) |
-                (((fxGreen>>DLIR_FIXED) <<  8) &   0xff00) |
-                 ((fxBlue >>DLIR_FIXED) <<  0);
-        }
-
-        pDest += nDestPitch;
-//        pSrc += nSrcPitch;
-    }
-}
-
-
-static void DLIR_ResizeBilinear_ARGB8888_Right_Plain(
-    uint8_t * pSrc,
-    uint32_t nSrcWidth,
-    uint32_t nSrcHeight,
-    uint32_t nSrcPitch,
-    uint8_t * pDest,
-    uint32_t nDestWidth,
-    uint32_t nDestHeight,
-    uint32_t nDestPitch,
-    int nDestXMin,
-    int nDestYMin,
-    int nDestXMax,
-    int nDestYMax
-) {
-    uint32_t fxSrc0, fxSrc1, fxSrc2, fxSrc3;
-    uint32_t nSrcX, nSrcY, nSrcIndex;
-
-    // const DLIR_Fixed fxRatioDestXToSrcX = (((nSrcWidth - 1)<<DLIR_FIXED) / nDestWidth);
-    // const DLIR_Fixed fxRatioDestYToSrcY = (((nSrcHeight - 1)<<DLIR_FIXED) / nDestHeight);
-    const DLIR_Fixed fxRatioDestXToSrcX = ((nSrcWidth<<DLIR_FIXED) / nDestWidth);
-    const DLIR_Fixed fxRatioDestYToSrcY = ((nSrcHeight<<DLIR_FIXED) / nDestHeight);
-    DLIR_FixedBig diffX, diffY;
-    DLIR_FixedBig fxBlue, fxGreen, fxRed;
-    
-    for (int nDestY = nDestYMin; nDestY <= nDestYMax; nDestY++) {
-        nSrcY = ((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>(DLIR_FIXED*2);
-        diffY = (((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcY << DLIR_FIXED);
-
-        for (int nDestX = nDestXMin; nDestX <= nDestXMax; nDestX++) {
-            nSrcX =  ((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>(DLIR_FIXED*2);
-            diffX = (((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcX << DLIR_FIXED);
-
-            nSrcIndex = (nSrcY * nSrcPitch) + (nSrcX << 2);
-            fxSrc0 = fxSrc1 = *((uint32_t *)(pSrc + nSrcIndex));
-            fxSrc2 = fxSrc3 = *((uint32_t *)(pSrc + nSrcIndex + nSrcPitch));
-
-            DLIR_FixedBig fxFactor3 = ((                  diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor2 = (((1<<DLIR_FIXED) - diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor1 = ((                  diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor0 = (((1<<DLIR_FIXED) - diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-
-            fxBlue = (
-                (((fxSrc0    ) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1    ) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2    ) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3    ) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxGreen = (
-                (((fxSrc0>> 8) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>> 8) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>> 8) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>> 8) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxRed = (
-                (((fxSrc0>>16) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>>16) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>>16) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>>16) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            *((uint32_t *)(pDest + (nDestX<<2))) =
-                0xff000000 |
-                (((fxRed  >>DLIR_FIXED) << 16) & 0xff0000) |
-                (((fxGreen>>DLIR_FIXED) <<  8) &   0xff00) |
-                 ((fxBlue >>DLIR_FIXED) <<  0);
-        }
-
-        pDest += nDestPitch;
-//        pSrc += nSrcPitch;
-    }
-}
-
-static void DLIR_ResizeBilinear_ARGB8888_BottomRight_Plain(
-    uint8_t * pSrc,
-    uint32_t nSrcWidth,
-    uint32_t nSrcHeight,
-    uint32_t nSrcPitch,
-    uint8_t * pDest,
-    uint32_t nDestWidth,
-    uint32_t nDestHeight,
-    uint32_t nDestPitch,
-    int nDestXMin,
-    int nDestYMin,
-    int nDestXMax,
-    int nDestYMax
-) {
-    uint32_t fxSrc0, fxSrc1, fxSrc2, fxSrc3;
-    uint32_t nSrcX, nSrcY, nSrcIndex;
-
-    const DLIR_Fixed fxRatioDestXToSrcX = ((nSrcWidth<<DLIR_FIXED) / nDestWidth);
-    const DLIR_Fixed fxRatioDestYToSrcY = ((nSrcHeight<<DLIR_FIXED) / nDestHeight);
-    DLIR_FixedBig diffX, diffY;
-    DLIR_FixedBig fxBlue, fxGreen, fxRed;
-    
-    for (int nDestY = nDestYMin; nDestY <= nDestYMax; nDestY++) {
-        nSrcY = ((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>(DLIR_FIXED*2);
-        diffY = (((DLIR_FixedBig)fxRatioDestYToSrcY * (DLIR_FixedBig)(nDestY<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcY << DLIR_FIXED);
-
-        for (int nDestX = nDestXMin; nDestX <= nDestXMax; nDestX++) {
-            nSrcX =  ((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>(DLIR_FIXED*2);
-            diffX = (((DLIR_FixedBig)fxRatioDestXToSrcX * (DLIR_FixedBig)(nDestX<<DLIR_FIXED))>>DLIR_FIXED) - (nSrcX << DLIR_FIXED);
-
-            nSrcIndex = (nSrcY * nSrcPitch) + (nSrcX << 2);
-            fxSrc0 = fxSrc1 = fxSrc2 = fxSrc3 = *((uint32_t *)(pSrc + nSrcIndex));
-
-            DLIR_FixedBig fxFactor3 = ((                  diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor2 = (((1<<DLIR_FIXED) - diffX) * (                  diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor1 = ((                  diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-            DLIR_FixedBig fxFactor0 = (((1<<DLIR_FIXED) - diffX) * ((1<<DLIR_FIXED) - diffY)) >> DLIR_FIXED;
-
-            fxBlue = (
-                (((fxSrc0    ) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1    ) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2    ) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3    ) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxGreen = (
-                (((fxSrc0>> 8) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>> 8) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>> 8) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>> 8) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            fxRed = (
-                (((fxSrc0>>16) & 0xff)<<DLIR_FIXED) * fxFactor0 +
-                (((fxSrc1>>16) & 0xff)<<DLIR_FIXED) * fxFactor1 +
-                (((fxSrc2>>16) & 0xff)<<DLIR_FIXED) * fxFactor2 +
-                (((fxSrc3>>16) & 0xff)<<DLIR_FIXED) * fxFactor3
-            ) >> DLIR_FIXED;
-            
-            *((uint32_t *)(pDest + (nDestX<<2))) =
-                0xff000000 |
-                (((fxRed  >>DLIR_FIXED) << 16) & 0xff0000) |
-                (((fxGreen>>DLIR_FIXED) <<  8) &   0xff00) |
-                 ((fxBlue >>DLIR_FIXED) <<  0);
-        }
-
-        pDest += nDestPitch;
-    }
-}
-
 
 extern "C"
 void DLIR_ResizeBilinear_ARGB8888(
@@ -511,73 +264,93 @@ void DLIR_ResizeBilinear_ARGB8888(
     int32_t srcUpdateWidth,
     int32_t srcUpdateHeight
 ) {
-    const DLIR_Fixed fxRatioSrcXtoDestX = (destWidth << DLIR_FIXED) / (srcWidth); // - 1);
-    const DLIR_Fixed fxRatioSrcYtoDestY = (destHeight << DLIR_FIXED) / (srcHeight); // - 1);
+    // Get right (X2) + bottom (Y2) coords for the srcUpdate rect.  These will be used from now
+    // on, rather than width + height
+    int32_t srcUpdateX2 = srcUpdateX + srcUpdateWidth  - 1;
+    int32_t srcUpdateY2 = srcUpdateY + srcUpdateHeight - 1;
 
-    //
-    //                                   -1 here is for margin
-    //                                   on the left/top side
-    //                                             |
-    //                                            vvv
-    int32_t destUpdateX = (DLIR_max(0, srcUpdateX - 1) * fxRatioSrcXtoDestX) >> DLIR_FIXED;
-    int32_t destUpdateY = (DLIR_max(0, srcUpdateY - 1) * fxRatioSrcYtoDestY) >> DLIR_FIXED;
-
-    //
-    //                                                                                         +1 (in fixed-point) is to
-    //                                                                                         deal with rounding errors
-    //                                                                                                     |
-    //                                                     +2 here is +1 for margin on                     |
-    //                                                     the left/top side, and +1 for                   |
-    //                                                     right/bottom side                               |
-    //                                                                 |                                   |
-    //                                                                vvv                          vvvvvvvvvvvvvvvv                                                               
-    int32_t destUpdateWidth  = ((DLIR_min(srcWidth,  srcUpdateWidth  + 2) * fxRatioSrcXtoDestX) + (1 << DLIR_FIXED)) >> DLIR_FIXED;
-    int32_t destUpdateHeight = ((DLIR_min(srcHeight, srcUpdateHeight + 2) * fxRatioSrcYtoDestY) + (1 << DLIR_FIXED)) >> DLIR_FIXED;
-
-    // Prevent destUpdateX and destUpdateY from being less than 0
-    destUpdateX = DLIR_max(0, destUpdateX);
-    destUpdateY = DLIR_max(0, destUpdateY);
-
-    // Prevent destUpdateX2 and destUpdateY2 from being more than width and height.
-    // Also, note whether special considerations need to be taken for the right-column,
-    // or the bottom-row.
-    int32_t destUpdateX2 = DLIR_min(
-        destWidth,
-        (destUpdateX + destUpdateWidth)
-    );
-    bool doRightMostColumn = false;
-    if (destUpdateX2 == destWidth) {
-        destUpdateX2--;
-        doRightMostColumn = true;
-    }
-    destUpdateX2--;
-
-    int32_t destUpdateY2 = DLIR_min(
-         destHeight,
-         (destUpdateY + destUpdateHeight)
-    );
-    bool doBottomMostRow = false;
-    if (destUpdateY2 == destHeight) {
-        destUpdateY2--;
-        doBottomMostRow = true;
-    }
-    destUpdateY2--;
-
-    // Pointers to src and dest's start, adjusting for initial X and Y, will
-    // be passed to appropriate scalers.
-    uint8_t * src = (uint8_t *)_src;
-    uint8_t * dest = (uint8_t *)_dest;
+    // Make srcUpdate rect larger by 1px on all sides, to make sure destUpdate rect is sufficiently
+    // large
+    srcUpdateX -= 1;
+    srcUpdateY -= 1;
+    srcUpdateX2 += 2;
+    srcUpdateY2 += 2;
     
-    src += (srcPitch * srcY);
-    src += (srcX << 2);
+    // Prevent under flow in srcUpdate rect, as negative values can mess up fixed-point calculations
+    srcUpdateX  = DLIR_max(0, srcUpdateX);
+    srcUpdateY  = DLIR_max(0, srcUpdateY);
+    srcUpdateX2 = DLIR_max(0, srcUpdateX2);
+    srcUpdateY2 = DLIR_max(0, srcUpdateY2);
 
-    dest += (destPitch * destY);
-    dest += (destX << 2);
-    dest += (destUpdateY * destPitch);
+    // Calculate destUpdate rect
+    const DLIR_Fixed fxRatioSrcXtoDestX = (destWidth  << DLIR_FIXED) / (srcWidth  - 1);
+    const DLIR_Fixed fxRatioSrcYtoDestY = (destHeight << DLIR_FIXED) / (srcHeight - 1);
+    int32_t destUpdateX  = (srcUpdateX  * fxRatioSrcXtoDestX) >> DLIR_FIXED;
+    int32_t destUpdateY  = (srcUpdateY  * fxRatioSrcYtoDestY) >> DLIR_FIXED;
+    int32_t destUpdateX2 = (srcUpdateX2 * fxRatioSrcXtoDestX) >> DLIR_FIXED;
+    int32_t destUpdateY2 = (srcUpdateY2 * fxRatioSrcYtoDestY) >> DLIR_FIXED;
 
-    // Handle bulk of scaling (usually, unless we have really narrow-or-small 
-    // dests)
-    DLIR_ResizeBilinear_ARGB8888_Body_Plain(
+    // Prevent over-flow in srcUpdate rect (under-flow should already have been dealt with)
+    srcUpdateX  = DLIR_min(srcUpdateX,  srcWidth  - 1);
+    srcUpdateY  = DLIR_min(srcUpdateY,  srcHeight - 1);
+    srcUpdateX2 = DLIR_min(srcUpdateX2, srcWidth  - 1);
+    srcUpdateY2 = DLIR_min(srcUpdateY2, srcHeight - 1);
+
+    // Prevent under and overflow in destUpdate rect
+    destUpdateX  = DLIR_clamp(destUpdateX,  0, destWidth  - 1);
+    destUpdateY  = DLIR_clamp(destUpdateY,  0, destHeight - 1);
+    destUpdateX2 = DLIR_clamp(destUpdateX2, 0, destWidth  - 1);
+    destUpdateY2 = DLIR_clamp(destUpdateY2, 0, destHeight - 1);
+    
+    //
+    // Scale!
+    //
+    const uint8_t * src  = (uint8_t *) _src;
+          uint8_t * dest = (uint8_t *) _dest;
+
+#if DLIR_USE_SSE2 && DLIR_USE_SSE41
+    {
+        const int32_t destUpdateWidth = destUpdateX2 - destUpdateX + 1;
+        const int32_t fracPart = (destUpdateWidth % 4);
+        const int32_t intPart = destUpdateWidth - fracPart;
+
+        if (intPart > 0) {
+            DLIR_ResizeBilinear_ARGB8888_SSE41(
+                src,
+                srcWidth,
+                srcHeight,
+                srcPitch,
+                dest,
+                destWidth,
+                destHeight,
+                destPitch,
+                destUpdateX,
+                destUpdateY,
+                destUpdateX + intPart - 1,
+                destUpdateY2
+            );
+        }
+        if (fracPart > 0) {
+            DLIR_ResizeBilinear_ARGB8888_Plain(
+                src,
+                srcWidth,
+                srcHeight,
+                srcPitch,
+                dest,
+                destWidth,
+                destHeight,
+                destPitch,
+                destUpdateX2 - fracPart,
+                destUpdateY,
+                destUpdateX2,
+                destUpdateY2
+            );
+        }
+        return;
+    }
+#endif
+
+    DLIR_ResizeBilinear_ARGB8888_Plain(
         src,
         srcWidth,
         srcHeight,
@@ -592,107 +365,6 @@ void DLIR_ResizeBilinear_ARGB8888(
         destUpdateX2,
         destUpdateY2
     );
-
-    //
-    // Do special scaling for left-column and/or bottom-row (if and when they
-    // fall on memory boundaries).  We don't want to read from invalid locations
-    // offset from src's start!
-    //
-
-    if (doBottomMostRow) {
-        DLIR_ResizeBilinear_ARGB8888_Bottom_Plain(
-            src,
-            srcWidth,
-            srcHeight,
-            srcPitch,
-            dest + (destPitch * (destUpdateY2+1)),
-            destWidth,
-            destHeight,
-            destPitch,
-
-            destUpdateX,
-            destUpdateY2+1,
-            destUpdateX2,
-            destUpdateY2+1
-        );
-    }
-
-    if (doRightMostColumn) {
-        DLIR_ResizeBilinear_ARGB8888_Right_Plain(
-            src,
-            srcWidth,
-            srcHeight,
-            srcPitch,
-            dest,
-            destWidth,
-            destHeight,
-            destPitch,
-
-            destUpdateX2+1,
-            destUpdateY,
-            destUpdateX2+1,
-            destUpdateY2
-        );
-    }
-
-    if (doBottomMostRow || doRightMostColumn) {
-        DLIR_ResizeBilinear_ARGB8888_BottomRight_Plain(
-            src,
-            srcWidth,
-            srcHeight,
-            srcPitch,
-            dest + (destPitch * (destUpdateY2+1)),
-            destWidth,
-            destHeight,
-            destPitch,
-
-            destUpdateX2+1,
-            destUpdateY2+1,
-            destUpdateX2+1,
-            destUpdateY2+1
-        );
-    }
-    
-#if 0 //__SSE4_1__
-    {
-        const uint32_t fracPart = (destWidth % 4);
-        const uint32_t intPart = destWidth - fracPart;
-
-        if (intPart > 0) {
-            DLIR_ResizeBilinear_ARGB8888_Body_SSE41(
-                src,
-                srcWidth,
-                srcHeight,
-                srcPitch,
-                dest,
-                destWidth,
-                destHeight,
-                destPitch,
-                0,
-                destHeight,
-                0,
-                intPart
-            );
-        }
-        if (fracPart > 0) {
-            DLIR_ResizeBilinear_ARGB8888_Body_Plain(
-                src,
-                srcWidth,
-                srcHeight,
-                srcPitch,
-                dest,
-                destWidth,
-                destHeight,
-                destPitch,
-                0,
-                destHeight,
-                intPart,
-                intPart + fracPart
-            );
-        }
-        return;
-    }
-#endif
 
 }
 

@@ -11,7 +11,8 @@ run: build
 	# ./test -r bi2 -f test_full.bmp -s 1024x768 -r src
 	# ./test -r bi11 -r DLIR --cmp -s 448x448
 
-	./test -r src -r DLIR -f test_330.bmp -s 450x450
+	./test -r src -r DLIR -f test_330.bmp -s 660x660
+	# ./test -r src -r DLIR -f test_330.bmp -s 450x450
 	# ./test -r src -r DLIR -f test_330.bmp -s 330x330
 	# ./test -r src -r DLIR -s 330x330 -c
 
