@@ -5,6 +5,7 @@
 #define DL_ImageResize_h
 
 #include <stdint.h>
+#include <string.h>
 
 #if !defined(DLIR_USE_SSE2)
     #if defined(__has_include)
@@ -306,6 +307,29 @@ static void DLIR_ResizeBilinear_ARGB8888_Plain(
     }
 }
 
+static void DLIR_Copy_XXXX8888_Plain(
+    const uint8_t * pSrc,
+    uint32_t nSrcWidth,
+    uint32_t nSrcHeight,
+    uint32_t nSrcPitch,
+    uint8_t * pDest,
+    uint32_t nDestWidth,
+    uint32_t nDestHeight,
+    uint32_t nDestPitch,
+    int nDestXMin,
+    int nDestYMin,
+    int nDestXMax,
+    int nDestYMax
+) {
+    for (int nDestY = nDestYMin; nDestY <= nDestYMax; nDestY++) {
+        memcpy(
+            pDest + (nDestY * nDestPitch) + (nDestXMin << 2),
+            pSrc + (nDestY * nSrcPitch) + (nDestXMin << 2),
+            (nDestXMax - nDestXMin + 1) << 2
+        );
+    }
+}
+
 DLIR_EXTERN_C void DLIR_ResizeBilinear_ARGB8888(
     void * _src,
     uint32_t srcX,
@@ -363,10 +387,29 @@ DLIR_EXTERN_C void DLIR_ResizeBilinear_ARGB8888(
     destUpdateY2 = DLIR_clamp(destUpdateY2, 0, destHeight - 1);
     
     //
-    // Scale!
+    // Scale, if needed
     //
     const uint8_t * src  = (uint8_t *) _src;
           uint8_t * dest = (uint8_t *) _dest;
+    
+    // If no scaling is needed, just do a memcpy
+    if (srcWidth == destWidth && srcHeight == destHeight) {
+        DLIR_Copy_XXXX8888_Plain(
+            src,
+            srcWidth,
+            srcHeight,
+            srcPitch,
+            dest,
+            destWidth,
+            destHeight,
+            destPitch,
+            destUpdateX,
+            destUpdateY,
+            destUpdateX2,
+            destUpdateY2
+        );
+        return;
+    }
 
 #if DLIR_USE_SSE2 && DLIR_USE_SSE41
     {
