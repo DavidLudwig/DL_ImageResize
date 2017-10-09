@@ -38,7 +38,7 @@
 #endif
 
 DLIR_EXTERN_C void DLIR_ResizeBilinear_ARGB8888(
-    void * src,           // source buffer
+    const void * src,     // source buffer
     uint32_t srcX,        // left-bounds of source region, in pixels
     uint32_t srcY,        // top-bounds of source region, in pixels
     uint32_t srcWidth,    // width of source region, in pixels
@@ -331,7 +331,7 @@ static void DLIR_Copy_XXXX8888_Plain(
 }
 
 DLIR_EXTERN_C void DLIR_ResizeBilinear_ARGB8888(
-    void * _src,
+    const void * _src,
     uint32_t srcX,
     uint32_t srcY,
     uint32_t srcWidth,
