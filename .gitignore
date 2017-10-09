@@ -29,3 +29,5 @@
 *.app
 test/test
 
+# Xcode user-specific settings
+*xcuserdata*
