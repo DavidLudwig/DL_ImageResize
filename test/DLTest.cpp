@@ -10,6 +10,9 @@
 #define STBI_FAILURE_USERMSG
 #include "stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 // Disable deprecated C function warnings from MSVC:
 //#define _CRT_SECURE_NO_WARNINGS
 
@@ -316,14 +319,31 @@ void DLT_Test_ProcessEvent(const SDL_Event & e)
                     if (e.key.keysym.mod & KMOD_CTRL) {
                         char file[32];
                         for (int i = 0; i < (int)envs.size(); ++i) {
-                            SDL_snprintf(file, sizeof(file), "output%s-%d.bmp", SDL_GetKeyName(e.key.keysym.sym), i);
+                            SDL_snprintf(file, sizeof(file), "output%s-%d.png", SDL_GetKeyName(e.key.keysym.sym), i);
                             if (envs[i].dest) {
-                                if (SDL_SaveBMP(envs[i].dest, file) == 0) {
-                                    SDL_Log("Saved %s", file);
-                                } else {
+                                SDL_Surface * tempDestABGR = NULL;
+                                SDL_PixelFormat * format = SDL_AllocFormat(SDL_PIXELFORMAT_ABGR8888);
+                                
+                                if ( ! format) {
                                     SDL_Log("Unable to save %s: \"%s\"", file, SDL_GetError());
+                                } else {
+                                    tempDestABGR = SDL_ConvertSurface(envs[i].dest, format, 0);
+                                    if ( ! tempDestABGR) {
+                                        SDL_Log("Unable to save %s: \"%s\"", file, SDL_GetError());
+                                    } else if ( ! stbi_write_png(file, tempDestABGR->w, tempDestABGR->h, 4, tempDestABGR->pixels, tempDestABGR->pitch)) {
+                                        SDL_Log("Unable to save %s: unknown error in stbi_write_png", file);
+                                    } else {
+                                        SDL_Log("Saved %s", file);
+                                    }
                                 }
-                            }
+                                
+                                if (tempDestABGR) {
+                                    SDL_FreeSurface(tempDestABGR);
+                                }
+                                if (format) {
+                                    SDL_FreeFormat(format);
+                                }
+                           }
                         }
                     } else {
                         int compare_threshold = SDL_atoi(SDL_GetKeyName(e.key.keysym.sym));
