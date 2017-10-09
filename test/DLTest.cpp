@@ -98,55 +98,70 @@ void DLT_Render_Compare::Init(DLT_Env & env) {
     }
 }
 
-void DLT_Render_Compare::Draw(DLT_Env & env) {
-    //std::vector<DLT_Env> & envs = DLT_GetEnvs();
-    
-    // Draw diff between scenes 0 and 1
-    SDL_Surface * dest = env.dest;
-    
-    DLT_Env * compareMe[2] = {NULL, NULL};
-    if ( ! DLT_GetOtherEnvs(&env, (DLT_Env **)&compareMe, 2)) {
-        return;
-    }
-    
-    SDL_Surface * A = compareMe[0]->dest;
-    SDL_Surface * B = compareMe[1]->dest;
-    
+
+bool DLT_CompareSurfaces(
+    const SDL_Surface * srcA,
+    const SDL_Surface * srcB,
+    SDL_Surface * dest,
+    DLT_ComparisonType compare_type,
+    int compare_threshold
+) {
+    bool all_pixels_are_in_threshold = true;
     for (int y = 0; y < dest->h; ++y) {
         for (int x = 0; x < dest->w; ++x) {
             Uint32 dc = 0xffff0000;
-            if (A && B) {
-                if (x >= A->w || y >= A->h || y >= B->w || y >= B->h) {
+            if (srcA && srcB) {
+                if (x >= srcA->w || y >= srcA->h || y >= srcB->w || y >= srcB->h) {
                     dc = 0xffffffff;
                 } else {
-                    Uint32 ac = DLT_ReadPixel32_Raw(A->pixels, A->pitch, 4, x, y);
+                    Uint32 ac = DLT_ReadPixel32_Raw(srcA->pixels, srcA->pitch, 4, x, y);
                     int aa, ar, ag, ab;
                     DLT_SplitARGB32(ac, aa, ar, ag, ab);
                     
-                    Uint32 bc = DLT_ReadPixel32_Raw(B->pixels, B->pitch, 4, x, y);
+                    Uint32 bc = DLT_ReadPixel32_Raw(srcB->pixels, srcB->pitch, 4, x, y);
                     int ba, br, bg, bb;
                     DLT_SplitARGB32(bc, ba, br, bg, bb);
                     
                     int beyond = 0;
-                    if (compare & DLT_COMPARE_A) {
+                    if (compare_type & DLT_COMPARE_A) {
                         beyond |= abs(aa - ba) > compare_threshold;
                     }
-                    if (compare & DLT_COMPARE_R) {
+                    if (compare_type & DLT_COMPARE_R) {
                         beyond |= abs(ar - br) > compare_threshold;
                     }
-                    if (compare & DLT_COMPARE_G) {
+                    if (compare_type & DLT_COMPARE_G) {
                         beyond |= abs(ag - bg) > compare_threshold;
                     }
-                    if (compare & DLT_COMPARE_B) {
+                    if (compare_type & DLT_COMPARE_B) {
                         beyond |= abs(ab - bb) > compare_threshold;
                     }
                     
                     dc = beyond ? 0xffffffff : 0x00000000;
+                    if (beyond) {
+                        all_pixels_are_in_threshold = false;
+                    }
                 }
             }
-            DLT_WritePixel32_Raw(dest->pixels, dest->pitch, 4, x, y, dc);
+            if (dest) {
+                DLT_WritePixel32_Raw(dest->pixels, dest->pitch, 4, x, y, dc);
+            }
         }
     }
+    return all_pixels_are_in_threshold;
+}
+
+void DLT_Render_Compare::Draw(DLT_Env & env) {
+    //std::vector<DLT_Env> & envs = DLT_GetEnvs();
+    
+    // Draw diff between scenes 0 and 1
+    DLT_Env * compareMe[2] = {NULL, NULL};
+    if ( ! DLT_GetOtherEnvs(&env, (DLT_Env **)&compareMe, 2)) {
+        return;
+    }
+
+    SDL_Surface * A = compareMe[0]->dest;
+    SDL_Surface * B = compareMe[1]->dest;
+    this->last_compare_result = DLT_CompareSurfaces(A, B, env.dest, this->compare_type, this->compare_threshold);
 }
 
 
@@ -183,32 +198,11 @@ static uint64_t totalTicks = 0;
 static int lockedX = -1;
 static int lockedY = -1;
 #define DLT_IS_LOCKED() (lockedX >= 0 && lockedY >= 0)
+bool cmpExit = false;
 
 
 static void DLT_UpdateWindowTitles()
 {
-    const char * compare_name = "";
-    switch (compare) {
-        case DLT_COMPARE_ARGB: {
-            compare_name = "argb";
-        } break;
-        case DLT_COMPARE_A: {
-            compare_name = "a";
-        } break;
-        case DLT_COMPARE_R: {
-            compare_name = "r";
-        } break;
-        case DLT_COMPARE_G: {
-            compare_name = "g";
-        } break;
-        case DLT_COMPARE_B: {
-            compare_name = "b";
-        } break;
-        case DLT_COMPARE_RGB: {
-            compare_name = "rgb";
-        } break;
-    }
-
     int curX, curY;
     if (DLT_IS_LOCKED()) {
         curX = lockedX;
@@ -232,8 +226,30 @@ static void DLT_UpdateWindowTitles()
         const char * lockedText = DLT_IS_LOCKED() ? ",lock" : "";
 
         if (dynamic_cast<DLT_Render_Compare *>(envs[i].renderer)) {
+            DLT_Render_Compare * cmp = (DLT_Render_Compare *) envs[i].renderer;
+            const char * compare_name = "";
+            switch (cmp->compare_type) {
+                case DLT_COMPARE_ARGB: {
+                    compare_name = "argb";
+                } break;
+                case DLT_COMPARE_A: {
+                    compare_name = "a";
+                } break;
+                case DLT_COMPARE_R: {
+                    compare_name = "r";
+                } break;
+                case DLT_COMPARE_G: {
+                    compare_name = "g";
+                } break;
+                case DLT_COMPARE_B: {
+                    compare_name = "b";
+                } break;
+                case DLT_COMPARE_RGB: {
+                    compare_name = "rgb";
+                } break;
+            }
             SDL_snprintf(window_title, SDL_arraysize(window_title), "%s %s +/-:%d p:%d,%d%s a,rgb:%02x,%02x%02x%02x",
-                typeName.c_str(), compare_name, compare_threshold, curX, curY, lockedText,
+                typeName.c_str(), compare_name, cmp->compare_threshold, curX, curY, lockedText,
                 a, r, g, b);
         } else {
             SDL_snprintf(window_title, SDL_arraysize(window_title), "%s p:(%d,%d)%s a,rgb:0x%02x,0x%02x%02x%02x",
@@ -306,17 +322,40 @@ void DLT_Test_ProcessEvent(const SDL_Event & e)
                             }
                         }
                     } else {
-                        compare_threshold = SDL_atoi(SDL_GetKeyName(e.key.keysym.sym));
+                        int compare_threshold = SDL_atoi(SDL_GetKeyName(e.key.keysym.sym));
+                        for (int i = 0; i < (int)envs.size(); ++i) {
+                            DLT_Render_Compare * cmp = dynamic_cast<DLT_Render_Compare *>(envs[i].renderer);
+                            if (cmp) {
+                                cmp->compare_threshold = compare_threshold;
+                            }
+                        }
                         DLT_UpdateWindowTitles();
                     }
                 } break;
 
-                case SDLK_c: compare = DLT_COMPARE_ARGB; DLT_UpdateWindowTitles(); break;
-                case SDLK_a: compare = DLT_COMPARE_A;    DLT_UpdateWindowTitles(); break;
-                case SDLK_r: compare = DLT_COMPARE_R;    DLT_UpdateWindowTitles(); break;
-                case SDLK_g: compare = DLT_COMPARE_G;    DLT_UpdateWindowTitles(); break;
-                case SDLK_b: compare = DLT_COMPARE_B;    DLT_UpdateWindowTitles(); break;
-                case SDLK_x: compare = DLT_COMPARE_RGB;  DLT_UpdateWindowTitles(); break;
+                case SDLK_c:
+                case SDLK_a:
+                case SDLK_r:
+                case SDLK_g:
+                case SDLK_b:
+                case SDLK_x: {
+                    DLT_ComparisonType compare = DLT_COMPARE_ARGB;
+                    switch (e.key.keysym.sym) {
+                        case SDLK_c: compare = DLT_COMPARE_ARGB;    break;
+                        case SDLK_a: compare = DLT_COMPARE_A;       break;
+                        case SDLK_r: compare = DLT_COMPARE_R;       break;
+                        case SDLK_g: compare = DLT_COMPARE_G;       break;
+                        case SDLK_b: compare = DLT_COMPARE_B;       break;
+                        case SDLK_x: compare = DLT_COMPARE_RGB;     break;
+                    }
+                    for (int i = 0; i < (int)envs.size(); ++i) {
+                        DLT_Render_Compare * cmp = dynamic_cast<DLT_Render_Compare *>(envs[i].renderer);
+                        if (cmp) {
+                            cmp->compare_type = compare;
+                        }
+                    }
+                    DLT_UpdateWindowTitles();
+                } break;
             }
         } break;
         case SDL_WINDOWEVENT: {
@@ -346,7 +385,16 @@ void DLT_Tick()
     double lastLockedY = 0;
 
     if (numTicksToQuit == 0) {
-        exit(0);
+        int exitCode = 0;
+        if (cmpExit) {
+            for (int i = 0; i < (int)envs.size(); ++i) {
+                DLT_Render_Compare * cmp = dynamic_cast<DLT_Render_Compare *>(envs[i].renderer);
+                if (cmp && ! cmp->last_compare_result) {
+                    exitCode = 1;
+                }
+            }
+        }
+        exit(exitCode);
     }
 
     totalTicks++;
@@ -485,28 +533,33 @@ static bool DLT_AddRendererByName(const std::string & name) {
 int DLT_Run(int argc, char **argv, const char * defaultRenderer) {
     bool isHeadless = false;
     bool isFullscreen = false;
+    int compare_threshold_default = 0;
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-?") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("DL_Raster test app\n"
                    "\n"
                    "Usage: \n"
-                   "\ttest [-h | --headless] [-c | --cmp] [-n N] [-t N] [-r NAME] [--list|-l]\n"
+                   "\ttest [-h | --headless] [-c | --cmp] [--interval|-i N] [--ticks|-n N] [-r NAME] [--list|-l] [--destscale|-d WxH]\n"
                    "\n"
                    "Options:\n"
-                   "\t--headless | -h   Run in headless-mode (without displaying any GUIs)\n"
-                   "\t-t N              Run for N ticks, then quit, or -1 to run indefinitely (default: -1)\n"
-                   "\t--cmp | -c        Run in comparison mode\n"
-                   "\t-n N              Log a performance measurement every N ticks (default: %d)\n"
-                   "\t-r NAME           Add a renderer of name (case-insensitive), NAME \n"
-                   "\t-rl               List available renderers\n"
+                   "\t--headless | -hl      Run in headless-mode (without displaying any GUIs)\n"
+                   "\t-n | --ticks N        Run for N ticks, then quit, or -1 to run indefinitely (default: -1)\n"
+                   "\t--cmp | -c            Run in comparison mode\n"
+                   "\t--cmpthreshold N      Set the pixel-difference threshold for comparisons (default: 0)\n"
+                   "\t--cmpexit             Return a non-zero exit code if a comparison had any 'beyond' pixels.\n"
+                   "\t                        (requires -t|--ticks N option)\n"
+                   "\t--interval | -i N     Log a performance measurement every N ticks (default: %d)\n"
+                   "\t-r NAME               Add a renderer of name (case-insensitive), NAME \n"
+                   "\t-rl                   List available renderers\n"
+                   "\t--destscale | -d WxH  Destination scaling factor\n"
                    "\n",
                    numTicksBetweenPerfMeasurements
                    );
             return 0;
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--headless") == 0) {
+        } else if (strcmp(argv[i], "-hl") == 0 || strcmp(argv[i], "--headless") == 0) {
             isHeadless = true;
-        } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
+        } else if (SDL_strcmp(argv[i], "-d") == 0 || SDL_strcmp(argv[i], "--destscale") == 0) {
             if (++i < argc) {
                 if (SDL_strcasecmp(argv[i], "full") == 0) {
                     isFullscreen = true;
@@ -514,12 +567,18 @@ int DLT_Run(int argc, char **argv, const char * defaultRenderer) {
             }
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--cmp") == 0) {
             DLT_AddRenderer(new DLT_Render_Compare());
-        } else if (strcmp(argv[i], "-t") == 0) {
+        } else if (strcmp(argv[i], "--cmpthreshold") == 0) {
+            if (++i < argc) {
+                compare_threshold_default = SDL_atoi(argv[i]);
+            }
+        } else if (strcmp(argv[i], "--cmpexit") == 0) {
+            cmpExit = true;
+        } else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--ticks") == 0) {
             if ((i + 1) < argc) {
                 numTicksToQuit = atoi(argv[i+1]);
                 i++;
             }
-        } else if (strcmp(argv[i], "-n") == 0) {
+        } else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--interval") == 0) {
             if ((i + 1) < argc) {
                 numTicksBetweenPerfMeasurements = atoi(argv[i+1]);
                 i++;
@@ -594,6 +653,10 @@ int DLT_Run(int argc, char **argv, const char * defaultRenderer) {
     for (int i = 0; i < (int)envs.size(); ++i) {
         envs[i].index = i;
         envs[i].renderer->Init(envs[i]);
+        if (dynamic_cast<DLT_Render_Compare *>(envs[i].renderer)) {
+            DLT_Render_Compare * cmp = (DLT_Render_Compare *) envs[i].renderer;
+            cmp->compare_threshold = compare_threshold_default;
+        }
 
         int w = (envs[i].dest ? envs[i].dest->w : 256);
         int h = (envs[i].dest ? envs[i].dest->h : 256);

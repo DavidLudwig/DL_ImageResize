@@ -95,11 +95,12 @@ enum DLT_ComparisonType : Uint8 {
     DLT_COMPARE_RGB     = (DLT_COMPARE_R | DLT_COMPARE_G | DLT_COMPARE_B),
     DLT_COMPARE_ARGB    = (DLT_COMPARE_A | DLT_COMPARE_R | DLT_COMPARE_G | DLT_COMPARE_B),
 };
-static DLT_ComparisonType compare = DLT_COMPARE_ARGB;
-static int compare_threshold = 0;
 struct DLT_Render_Compare : public DLT_Renderer {
     virtual void Init(DLT_Env & env);
     virtual void Draw(DLT_Env & env);
+    DLT_ComparisonType compare_type = DLT_COMPARE_ARGB;
+    int compare_threshold = 0;
+    bool last_compare_result = false;
 };
 
 std::vector<DLT_RendererMetadata *> & DLT_AllRendererMetadata();

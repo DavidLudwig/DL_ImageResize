@@ -1183,7 +1183,7 @@ int main(int argc, char ** argv) {
             if (++i < argc) {
                 srcFile = argv[i];
             }
-        } else if (SDL_strcmp(argv[i], "-s") == 0 || SDL_strcmp(argv[i], "--scale") == 0) {
+        } else if (SDL_strcmp(argv[i], "-d") == 0 || SDL_strcmp(argv[i], "--destscale") == 0) {
             if (++i < argc) {
                 if (SDL_strcasecmp(argv[i], "full") == 0) {
                     ScaleWidth = -1;
