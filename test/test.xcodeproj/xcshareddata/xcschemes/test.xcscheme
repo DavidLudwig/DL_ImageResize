@@ -67,27 +67,35 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-r src"
-            isEnabled = "YES">
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r bi8"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r DLIR"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-f $(PROJECT_DIR)/src_2x2.bmp"
+            argument = "-f $(PROJECT_DIR)/src_2x2.png"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-f $(PROJECT_DIR)/src_8x8.bmp"
+            argument = "-f $(PROJECT_DIR)/src_3x3.png"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-f $(PROJECT_DIR)/test_330.bmp"
+            argument = "-f $(PROJECT_DIR)/src_8x8.png"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-r bi8"
+            argument = "-f $(PROJECT_DIR)/test_330.png"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-d 3x3"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-d 4x4"
@@ -115,7 +123,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "--cmp"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>

@@ -69,15 +69,15 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-s 1024x768"
+            argument = "--scale 1024x768"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-h"
+            argument = "--headless"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-f $(PROJECT_DIR)/test_full.bmp"
+            argument = "-f $(PROJECT_DIR)/test_full.png"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

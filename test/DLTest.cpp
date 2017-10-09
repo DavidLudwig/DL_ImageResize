@@ -6,6 +6,10 @@
 #include <cstdarg>
 #include <unordered_map>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_FAILURE_USERMSG
+#include "stb_image.h"
+
 // Disable deprecated C function warnings from MSVC:
 //#define _CRT_SECURE_NO_WARNINGS
 

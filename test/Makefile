@@ -1,19 +1,19 @@
 run: build
 # 	#./test -c
-# 	# ./test -r bi2 -r bi3 --cmp test_330.bmp
-# 	# ./test -r bi3 test_full.bmp
+# 	# ./test -r bi2 -r bi3 --cmp test_330.png
+# 	# ./test -r bi3 test_full.png
 # 	#./test -r bi --headless --interval 10
 # 	# ./test -r bi2 --headless --interval 500 --ticks 2500 && ./test -r bi1 --headless --interval 500 --ticks 2500 && ./test -r scalesdl --headless --interval 500 --ticks 2500
-# 	# ./test -r bi2 --headless --interval 500 --ticks 2500 test_full.bmp && ./test -r bi1 --headless --interval 500 --ticks 2500 test_full.bmp && ./test -r scalesdl --headless --interval 500 --ticks 2500 test_full.bmp
-# 	# ./test -r bi2 -r bi5 --cmp -f test_330.bmp --destscale 448x448
-# 	# ./test -r bi2 -r bi2b --cmp -f test_330.bmp --destscale 448x448
+# 	# ./test -r bi2 --headless --interval 500 --ticks 2500 test_full.png && ./test -r bi1 --headless --interval 500 --ticks 2500 test_full.png && ./test -r scalesdl --headless --interval 500 --ticks 2500 test_full.png
+# 	# ./test -r bi2 -r bi5 --cmp -f test_330.png --destscale 448x448
+# 	# ./test -r bi2 -r bi2b --cmp -f test_330.png --destscale 448x448
 	# ./test -r bi2 -r bi10 --cmp --destscale 448x448
-	# ./test -r bi2 -f test_full.bmp --destscale 1024x768 -r src
+	# ./test -r bi2 -f test_full.png --destscale 1024x768 -r src
 	# ./test -r bi11 -r DLIR --cmp --destscale 448x448
 
-	./test -r src -r DLIR -f test_330.bmp --destscale 660x660
-	# ./test -r src -r DLIR -f test_330.bmp --destscale 450x450
-	# ./test -r src -r DLIR -f test_330.bmp --destscale 330x330
+	./test -r src -r DLIR -f test_330.png --destscale 660x660
+	# ./test -r src -r DLIR -f test_330.png --destscale 450x450
+	# ./test -r src -r DLIR -f test_330.png --destscale 330x330
 	# ./test -r src -r DLIR --destscale 330x330 -c
 
 build: DLTest.cpp DLTest.h main.cpp Makefile x86

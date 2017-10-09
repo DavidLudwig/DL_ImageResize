@@ -5,6 +5,9 @@
 #include <string>
 #include <cstring>
 #include <unordered_map>
+#include "stb_image.h"
+#include <errno.h>
+
 
 SDL_Surface * src = NULL;
 
@@ -1208,11 +1211,34 @@ int main(int argc, char ** argv) {
                 }
             }
         } else {
-            srcTemp = SDL_LoadBMP(srcFile.c_str());
-            if (!srcTemp) {
-                SDL_Log("ERROR, Couldn't load source image\n");
-                return 1;
+            FILE * srcFilePtr = fopen(srcFile.c_str(), "r");
+            if (!srcFilePtr) {
+                printf("ERROR: Unable to open srcFile, reason:\"%s\"\n", strerror(errno));
+                exit(1);
             }
+            int w = 0;
+            int h = 0;
+            stbi_uc * result = stbi_load_from_file(srcFilePtr, &w, &h, NULL, 4);
+            if (!result) {
+                printf("ERROR: Unable to decode opened srcFile, reason:\"%s\"\n", stbi_failure_reason());
+                exit(1);
+            }
+            // Convert from ABGR8888 to ARGB8888
+            for (int y = 0; y < h; ++y) {
+                for (int x = 0; x < w; ++x) {
+                    const size_t offset = ((y * w) + x) * 4;
+                    uint8_t r = result[offset + 0];
+                    uint8_t g = result[offset + 1];
+                    uint8_t b = result[offset + 2];
+                    uint8_t a = result[offset + 3];
+                    result[offset + 0] = b;
+                    result[offset + 1] = g;
+                    result[offset + 2] = r;
+                    result[offset + 3] = a;
+                }
+            }
+            // Create a corresponding SDL_Surface
+            srcTemp = SDL_CreateRGBSurfaceFrom((void *)result, 330, 330, 32, w * 4, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         }
 
         // Align src's pixel-bufferon a 16-byte boundary, in case we want to
