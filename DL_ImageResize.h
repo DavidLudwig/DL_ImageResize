@@ -8,21 +8,29 @@
 #include <string.h>
 
 #if !defined(DLIR_USE_INTRINSICS)
-    #define DLIR_USE_INSTRINSICS 1
+    #define DLIR_USE_INTRINSICS 1
 #endif
 
-#if !defined(DLIR_USE_SSE2) && DLIR_USE_INTRINSICS
-    #if defined(__has_include)
-        #if __has_include("xmmintrin.h")
-            #define DLIR_USE_SSE2 1
+#if defined(__x86_64__) || defined(_M_X64)
+    #define DLIR_TARGET_X64 1
+#elif defined(__i386) || defined(_M_IX86)
+    #define DLIR_TARGET_X86 1
+#endif
+
+#if DLIR_USE_INTRINSICS && (DLIR_TARGET_X64 || DLIR_TARGET_X86)
+    #if !defined(DLIR_USE_SSE2)
+        #if defined(__has_include)
+            #if __has_include("xmmintrin.h")
+                #define DLIR_USE_SSE2 1
+            #endif
         #endif
     #endif
-#endif
 
-#if !defined(DLIR_USE_SSE41) && DLIR_USE_INTRINSICS
-    #if defined(__has_include)
-        #if __has_include("smmintrin.h")
-            #define DLIR_USE_SSE41 1
+    #if !defined(DLIR_USE_SSE41)
+        #if defined(__has_include)
+            #if __has_include("smmintrin.h")
+                #define DLIR_USE_SSE41 1
+            #endif
         #endif
     #endif
 #endif
@@ -72,6 +80,66 @@ typedef uint32_t DLIR_FixedBig;
 #define DLIR_max(A, B) (((A) > (B)) ? (A) : (B))
 #define DLIR_clamp(VALUE, LO, HI) DLIR_min((HI), DLIR_max((LO), (VALUE)))
 
+#if DLIR_TARGET_X86 || DLIR_TARGET_X64
+
+//
+// DLIR CPU-feature detection code, courtesy of Alexander J. Yee, via
+// CC0 code from https://github.com/Mysticial/FeatureDetector/
+//
+
+//
+// DLIR_cpuid
+//
+#if _WIN32
+
+#include <Windows.h>
+#include <intrin.h>
+
+static inline void DLIR_cpuid(int32_t out[4], int32_t x) {
+    __cpuidex(out, x, 0);
+}
+
+#else
+
+#include <cpuid.h>
+
+static inline void DLIR_cpuid(int32_t out[4], int32_t x) {
+    __cpuid_count(x, 0, out[0], out[1], out[2], out[3]);
+}
+
+#endif // end of DLIR_cpuid definitions
+
+
+//
+// DLIR_Has**SomeCPUFeature**
+//
+
+static bool DLIR_HasSSE41() {
+    int info[4];
+    DLIR_cpuid(info, 0);
+    int nIds = info[0];
+
+    DLIR_cpuid(info, 0x80000000);
+    uint32_t nExIds = info[0];
+
+    //  Detect Features
+    if (nIds >= 0x00000001){
+        DLIR_cpuid(info, 0x00000001);
+        // HW_MMX    = (info[3] & ((int)1 << 23)) != 0;
+        // HW_SSE    = (info[3] & ((int)1 << 25)) != 0;
+        // HW_SSE2   = (info[3] & ((int)1 << 26)) != 0;
+        // HW_SSE3   = (info[2] & ((int)1 <<  0)) != 0;
+
+        // HW_SSSE3  = (info[2] & ((int)1 <<  9)) != 0;
+        // HW_SSE41  = (info[2] & ((int)1 << 19)) != 0;
+        return (info[2] & ((int)1 << 19)) != 0;
+        // HW_SSE42  = (info[2] & ((int)1 << 20)) != 0;
+    }
+
+    return false;
+}
+
+#endif // #if DLIR_TARGET_X86 || DLIR_TARGET_X64
 
 #if DLIR_USE_SSE2 && DLIR_USE_SSE41
 
@@ -408,7 +476,7 @@ DLIR_EXTERN_C void DLIR_ResizeBilinear_ARGB8888(
     }
 
 #if DLIR_USE_SSE2 && DLIR_USE_SSE41
-    {
+    if (DLIR_HasSSE41()) {
         const int32_t destUpdateWidth = destUpdateX2 - destUpdateX + 1;
         const int32_t fracPart = (destUpdateWidth % 4);
         const int32_t intPart = destUpdateWidth - fracPart;
