@@ -1,8 +1,8 @@
 language: c++
 
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq nasm libsdl2-dev
+  - sudo apt-get update
+  - sudo apt-get install nasm libsdl2-dev
 
 script:
   - cd test
