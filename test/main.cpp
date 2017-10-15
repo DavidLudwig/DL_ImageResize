@@ -1247,7 +1247,7 @@ int main(int argc, char ** argv) {
                 }
             }
             // Create a corresponding SDL_Surface
-            srcTemp = SDL_CreateRGBSurfaceFrom((void *)result, 330, 330, 32, w * 4, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+            srcTemp = SDL_CreateRGBSurfaceFrom((void *)result, w, h, 32, w * 4, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         }
 
         // Align src's pixel-bufferon a 16-byte boundary, in case we want to
