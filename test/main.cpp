@@ -237,6 +237,7 @@ struct Render_Bilinear2 : public Render_ScalerBase {
 DLT_RegisterRenderer(Render_Bilinear2, "Bi2", "Bi1 renderer, with 'fixed-point' based math");
 
 
+/*
 extern "C" void BilinearScale3_x86(uint32_t * src, uint32_t srcWidth, uint32_t srcHeight, uint32_t * dest, uint32_t destWidth, uint32_t destHeight);
 
 struct Render_Bilinear3 : public Render_ScalerBase {
@@ -265,7 +266,7 @@ struct Render_Bilinear5 : public Render_ScalerBase {
     }
 };
 DLT_RegisterRenderer(Render_Bilinear5, "Bi5", "Bi4 renderer, with \"optimizations\" (slower, albeit less stack use)");
-
+*/
 
 
 #include "emmintrin.h"  // SSE2
