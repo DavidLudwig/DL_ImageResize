@@ -2,7 +2,7 @@ language: c++
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install nasm libsdl2-dev
+  - sudo apt-get install nasm libsdl2-dev libegl1-mesa-dev 
 
 script:
   - cd test
